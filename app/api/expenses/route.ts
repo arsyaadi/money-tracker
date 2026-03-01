@@ -31,13 +31,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Amount must be a positive number' }, { status: 400 });
     }
 
-    if (!CATEGORIES.includes(category)) {
-      return NextResponse.json(
-        { error: `Category must be one of: ${CATEGORIES.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
     const expense = await addExpense({
       date,
       amount,
