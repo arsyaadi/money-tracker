@@ -33,19 +33,19 @@ A fun, highly responsive, Gen-Z Neobrutalist financial tracker that looks like a
 
 1. Clone this repository.
 2. Install the dependencies:
-   \`\`\`bash
+   ```bash
    npm install
    # or
    yarn install
-   \`\`\`
-3. Create a \`.env.local\` file in the root directory (optional but recommended for hardcoding the URL):
-   \`\`\`env
+   ```
+3. Create a `.env.local` file in the root directory (optional but recommended for hardcoding the URL):
+   ```env
    APPS_SCRIPT_URL=https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec
-   \`\`\`
+   ```
 4. Run the development server:
-   \`\`\`bash
+   ```bash
    npm run dev
-   \`\`\`
+   ```
 5. Open [http://localhost:3000](http://localhost:3000). If you didn't set up the \`.env.local\`, the app will cleanly prompt you to paste your **Deployment ID** right in the UI!
 
 ---
