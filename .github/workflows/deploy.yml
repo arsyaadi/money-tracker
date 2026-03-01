@@ -23,3 +23,4 @@ jobs:
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
+          command: pages deploy .vercel/output/static --project-name="money-tracker"
