@@ -2,7 +2,15 @@
 
 A fun, highly responsive, Gen-Z Neobrutalist financial tracker that looks like a modern app but is secretly powered entirely by your own Google Sheets! No databases, no paid tiers, just your data in your spreadsheet.
 
-![Expense Tracker Preview](https://via.placeholder.com/800x450.png?text=Cute+Brutal+Expense+Tracker)
+
+<!-- App Screenshots -->
+
+<div align="center">
+   <img src="./screenshots/dashboard.png" alt="Dashboard Screenshot" width="400" style="margin: 0 10px; border: 4px solid #000; box-shadow: 4px 4px 0px 0px #000;">
+   <img src="./screenshots/history.png" alt="History Screenshot" width="400" style="margin: 0 10px; border: 4px solid #000; box-shadow: 4px 4px 0px 0px #000;">
+   <img src="./screenshots/summary.png" alt="Summary Screenshot" width="400" style="margin: 0 10px; border: 4px solid #000; box-shadow: 4px 4px 0px 0px #000;">
+</div>
+
 
 ## 💖 Features
 
