@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  --bg: #FFDBFD;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --border: #000000;
+  --border-hover: #000000;
+  --text-primary: #000000;
+  --text-secondary: #222222;
+  --text-muted: #444444;
+  --accent: #FF88BA;
+  --accent-dim: #ffc2df;
+  --accent-hover: #ff6ea8;
+  --danger: #ff4d4d;
+  --danger-dim: #ffb3b3;
+  --success: #4ade80;
+  --success-dim: #bbf7d0;
+
+  --cat-food: #f97316;
+  --cat-transport: #3b82f6;
+  --cat-entertainment: #8b5cf6;
+  --cat-health: #4ade80;
+  --cat-shopping: #ec4899;
+  --cat-bills: #eab308;
+  --cat-other: #6b7280;
+
+  --brutal-shadow: 4px 4px 0px 0px #000000;
+  --brutal-shadow-sm: 2px 2px 0px 0px #000000;
+  --brutal-border: 3px solid #000000;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: 2px;
+}
+
+.cat-container:hover .cat-delete-btn { opacity: 1 !important; }
+
