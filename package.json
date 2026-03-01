@@ -5,8 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:pages": "npx @cloudflare/next-on-pages",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy": "npm run build:pages && wrangler pages deploy .vercel/output/static --project-name=money-tracker"
   },
   "dependencies": {
     "next": "16.1.6",

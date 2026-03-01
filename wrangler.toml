@@ -1,0 +1,9 @@
+name = "money-tracker"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
+
+[vars]
+# Add your non-secret environment variables here
+# Example:
+# NODE_ENV = "production"
