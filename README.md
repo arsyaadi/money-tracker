@@ -29,13 +29,13 @@ A fun, highly responsive, Gen-Z Neobrutalist financial tracker that looks like a
 
 1. Create a new Google Sheet.
 2. Go to **Extensions > Apps Script**.
-3. Copy the entire contents of the Apps Script code (provided in the setup instructions) and paste it into the editor.
+3. Copy the entire contents of the [`docs/google-apps-script.js`](./docs/google-apps-script.js) file and paste it into the editor.
 4. **Important**: Replace `const SPREADSHEET_ID = "<SHEET_ID>";` at the top with your actual Google Sheet ID (found in the URL of your sheet).
 5. Click **Deploy > New Deployment**.
 6. Select **Web app**.
    - Execute as: **Me**
    - Who has access: **Anyone**
-7. Click **Deploy**, authorize the permissions, and **copy the Deployment ID** provided at the end.
+7. Click **Deploy**, authorize the permissions, and **copy the Web App URL** provided at the end.
 
 ### 2. Set up the Next.js Frontend
 
