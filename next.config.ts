@@ -1,8 +1,5 @@
-import type { NextConfig } from 'next';
+import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  // Required for Cloudflare Workers / next-on-pages
-  // See: https://github.com/cloudflare/next-on-pages
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
