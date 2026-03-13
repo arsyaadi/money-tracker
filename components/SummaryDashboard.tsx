@@ -68,7 +68,7 @@ export function SummaryDashboard({
           <h3
             style={{
               fontFamily: "'DM Serif Display', serif",
-              fontSize: '18px',
+              fontSize: 'var(--font-card-title)',
               marginBottom: '16px',
               color: 'var(--text-primary)',
             }}
@@ -79,51 +79,51 @@ export function SummaryDashboard({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ 
               display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
               padding: '12px',
               background: 'rgba(34, 197, 94, 0.1)',
               borderRadius: '4px',
               border: '2px solid rgba(34, 197, 94, 0.3)'
             }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#22c55e', fontWeight: 500 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#22c55e', fontWeight: 500, fontSize: '13px' }}>
                 💰 Income
               </span>
-              <span style={{ fontFamily: "'DM Mono', monospace", color: '#22c55e', fontSize: '16px' }}>
+              <span style={{ fontFamily: "'DM Mono', monospace", color: '#22c55e', fontSize: 'var(--font-card-title)', fontWeight: 600, marginTop: '4px' }}>
                 {formatAmount(totalIncome)}
               </span>
             </div>
             
             <div style={{ 
               display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
               padding: '12px',
               background: 'rgba(249, 115, 22, 0.1)',
               borderRadius: '4px',
               border: '2px solid rgba(249, 115, 22, 0.3)'
             }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent)', fontWeight: 500 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent)', fontWeight: 500, fontSize: '13px' }}>
                 💸 Expenses
               </span>
-              <span style={{ fontFamily: "'DM Mono', monospace", color: 'var(--accent)', fontSize: '16px' }}>
+              <span style={{ fontFamily: "'DM Mono', monospace", color: 'var(--accent)', fontSize: 'var(--font-card-title)', fontWeight: 600, marginTop: '4px' }}>
                 - {formatAmount(totalExpenses)}
               </span>
             </div>
 
             <div style={{ 
               display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
               padding: '12px',
               background: netBalance >= 0 ? 'rgba(34, 197, 94, 0.15)' : 'rgba(224, 85, 85, 0.15)',
               borderRadius: '4px',
               border: `2px solid ${netBalance >= 0 ? 'rgba(34, 197, 94, 0.4)' : 'rgba(224, 85, 85, 0.4)'}`
             }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: netBalance >= 0 ? '#22c55e' : 'var(--danger)', fontWeight: 600, fontSize: '16px' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: netBalance >= 0 ? '#22c55e' : 'var(--danger)', fontWeight: 500, fontSize: '13px' }}>
                 {netBalance >= 0 ? '📈' : '📉'} Net Balance
               </span>
-              <span style={{ fontFamily: "'DM Mono', monospace", color: netBalance >= 0 ? '#22c55e' : 'var(--danger)', fontSize: '18px', fontWeight: 600 }}>
+              <span style={{ fontFamily: "'DM Mono', monospace", color: netBalance >= 0 ? '#22c55e' : 'var(--danger)', fontSize: 'var(--font-title)', fontWeight: 600, marginTop: '4px' }}>
                 {formatAmount(netBalance)}
               </span>
             </div>
@@ -171,19 +171,19 @@ export function SummaryDashboard({
         <h3
           style={{
             fontFamily: "'DM Serif Display', serif",
-            fontSize: '18px',
+            fontSize: 'var(--font-card-title)',
             marginBottom: '8px',
             color: '#22c55e',
           }}
         >
           💰 Income
         </h3>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+        <p style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', marginBottom: '16px' }}>
           {periodLabel} • {formatAmount(totalIncome)} total • {incomes.length} entries
         </p>
 
         {incomeCategories.length === 0 || totalIncome === 0 ? (
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', padding: '20px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: 'var(--font-body)', textAlign: 'center', padding: '20px' }}>
             No income recorded
           </p>
         ) : (
@@ -199,13 +199,13 @@ export function SummaryDashboard({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '14px' }}>{cat.icon}</span>
-                      <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{cat.name}</span>
+                      <span style={{ fontSize: 'var(--font-small)', color: 'var(--text-secondary)' }}>{cat.name}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '11px', fontFamily: "'DM Mono', monospace", color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: 'var(--font-xxs)', fontFamily: "'DM Mono', monospace", color: 'var(--text-muted)' }}>
                         {pct.toFixed(1)}%
                       </span>
-                      <span style={{ fontSize: '13px', fontFamily: "'DM Mono', monospace", color: '#22c55e', fontWeight: 500 }}>
+                      <span style={{ fontSize: 'var(--font-small)', fontFamily: "'DM Mono', monospace", color: '#22c55e', fontWeight: 500 }}>
                         {formatAmount(val)}
                       </span>
                     </div>
@@ -221,8 +221,8 @@ export function SummaryDashboard({
 
         {incomes.length > 0 && topIncomeCategory && (
           <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '3px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Top source</span>
-            <span style={{ fontSize: '12px', fontFamily: "'DM Mono', monospace", color: '#22c55e' }}>
+            <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Top source</span>
+            <span style={{ fontSize: 'var(--font-xs)', fontFamily: "'DM Mono', monospace", color: '#22c55e' }}>
               {topIncomeCategory.icon} {topIncomeCategory.name}
             </span>
           </div>
@@ -240,19 +240,19 @@ export function SummaryDashboard({
         <h3
           style={{
             fontFamily: "'DM Serif Display', serif",
-            fontSize: '18px',
+            fontSize: 'var(--font-card-title)',
             marginBottom: '8px',
             color: 'var(--accent)',
           }}
         >
           💸 Expenses
         </h3>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+        <p style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', marginBottom: '16px' }}>
           {periodLabel} • {formatAmount(totalExpenses)} total • {expenses.length} entries
         </p>
 
         {categories.length === 0 || totalExpenses === 0 ? (
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center', padding: '20px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: 'var(--font-body)', textAlign: 'center', padding: '20px' }}>
             No expenses recorded
           </p>
         ) : (
@@ -268,13 +268,13 @@ export function SummaryDashboard({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '14px' }}>{cat.icon}</span>
-                      <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{cat.name}</span>
+                      <span style={{ fontSize: 'var(--font-small)', color: 'var(--text-secondary)' }}>{cat.name}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '11px', fontFamily: "'DM Mono', monospace", color: 'var(--text-muted)' }}>
+                      <span style={{ fontSize: 'var(--font-xxs)', fontFamily: "'DM Mono', monospace", color: 'var(--text-muted)' }}>
                         {pct.toFixed(1)}%
                       </span>
-                      <span style={{ fontSize: '13px', fontFamily: "'DM Mono', monospace", color: cat.color, fontWeight: 500 }}>
+                      <span style={{ fontSize: 'var(--font-small)', fontFamily: "'DM Mono', monospace", color: cat.color, fontWeight: 500 }}>
                         {formatAmount(val)}
                       </span>
                     </div>
@@ -290,8 +290,8 @@ export function SummaryDashboard({
 
         {expenses.length > 0 && topExpenseCategory && (
           <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '3px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Top category</span>
-            <span style={{ fontSize: '12px', fontFamily: "'DM Mono', monospace", color: topExpenseCategory.color }}>
+            <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>Top category</span>
+            <span style={{ fontSize: 'var(--font-xs)', fontFamily: "'DM Mono', monospace", color: topExpenseCategory.color }}>
               {topExpenseCategory.icon} {topExpenseCategory.name}
             </span>
           </div>
@@ -325,7 +325,7 @@ function StatCard({
     >
       <div
         style={{
-          fontSize: '11px',
+          fontSize: 'var(--font-xxs)',
           color: 'var(--text-secondary)',
           fontFamily: "'DM Mono', monospace",
           letterSpacing: '0.05em',
@@ -338,14 +338,14 @@ function StatCard({
       <div
         style={{
           fontFamily: "'DM Serif Display', serif",
-          fontSize: '24px',
+          fontSize: 'var(--font-value-lg)',
           color: accent,
           marginBottom: '4px',
         }}
       >
         {value}
       </div>
-      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sub}</div>
+      <div style={{ fontSize: 'var(--font-xxs)', color: 'var(--text-muted)' }}>{sub}</div>
     </div>
   );
 }

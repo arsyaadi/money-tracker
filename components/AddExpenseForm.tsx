@@ -156,10 +156,10 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
             background: 'var(--bg-card)', padding: '32px', borderRadius: '4px', width: '90%', maxWidth: '400px',
             border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)'
           }}>
-            <h2 style={{ marginBottom: '16px', fontSize: '20px', fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
+            <h2 style={{ marginBottom: '16px', fontSize: 'var(--font-title)', fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
               Delete Category?
             </h2>
-            <p style={{ marginBottom: '24px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+            <p style={{ marginBottom: '24px', fontSize: 'var(--font-body)', color: 'var(--text-secondary)' }}>
               Are you sure you want to delete the <strong>{categoryToDelete.name}</strong> category? This action cannot be undone.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
@@ -192,14 +192,14 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
         <h2
           style={{
             fontFamily: "'DM Serif Display', serif",
-            fontSize: '24px',
+            fontSize: 'var(--font-value-lg)',
             marginBottom: '4px',
             color: 'var(--text-primary)',
           }}
         >
           Add Expense
         </h2>
-        <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+        <p style={{ fontSize: 'var(--font-small)', color: 'var(--text-secondary)' }}>
           Keep track of your spending
         </p>
       </div>
@@ -239,7 +239,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
             />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: '14px', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: 'var(--font-body)', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
             {loading ? 'ADDING EXPENSE...' : addingCatLoading ? 'SAVING CATEGORY...' : 'DELETING CATEGORY...'}
           </div>
         </div>
@@ -270,7 +270,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
               style={{
                 ...inputStyle,
                 fontFamily: "'DM Mono', monospace",
-                fontSize: '16px',
+                fontSize: 'var(--font-value)',
               }}
             />
           </div>
@@ -293,7 +293,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
             <button 
               type="button" 
               onClick={() => setIsAddingCategory(!isAddingCategory)}
-              style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: "'DM Mono', monospace" }}
+              style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 'var(--font-xs)', fontWeight: 600, fontFamily: "'DM Mono', monospace" }}
             >
               {isAddingCategory ? 'Cancel' : '+ New Category'}
             </button>
@@ -360,7 +360,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
                       background: isSelected ? `${cat.color}18` : 'var(--bg-elevated)',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
-                      fontSize: '11px',
+                      fontSize: 'var(--font-xxs)',
                       fontFamily: "'DM Mono', monospace",
                       color: isSelected ? cat.color : 'var(--text-secondary)'
                     }}
@@ -380,7 +380,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
                           borderRadius: '50%',
                           width: '20px',
                           height: '20px',
-                          fontSize: '10px',
+                          fontSize: 'var(--font-xs)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -396,7 +396,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
                         {deletingCatId === cat.id ? '...' : '×'}
                       </button>
                     )}
-                    <span style={{ fontSize: '18px', lineHeight: 1, flexShrink: 0 }}>{cat.icon}</span>
+                    <span style={{ fontSize: 'var(--font-icon-sm)', lineHeight: 1, flexShrink: 0 }}>{cat.icon}</span>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', display: 'block', textAlign: 'center' }}>{cat.name}</span>
                   </div>
                 );
@@ -414,7 +414,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
               background: 'var(--danger-dim)',
               border: '1px solid rgba(224, 85, 85, 0.2)',
               color: 'var(--danger)',
-              fontSize: '13px',
+              fontSize: 'var(--font-small)',
             }}
           >
             {error}
@@ -430,7 +430,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
               background: 'var(--success-dim)',
               border: '1px solid rgba(92, 184, 122, 0.2)',
               color: 'var(--success)',
-              fontSize: '13px',
+              fontSize: 'var(--font-small)',
             }}
           >
             Expense added successfully!
@@ -449,7 +449,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
             color: loading ? 'var(--accent)' : '#0d0d0f',
             fontFamily: "'DM Mono', monospace",
             fontWeight: 600,
-            fontSize: '14px',
+            fontSize: 'var(--font-body)',
             cursor: loading ? 'not-allowed' : 'pointer',
             transition: 'background 0.2s',
           }}
@@ -463,7 +463,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
-  fontSize: '11px',
+  fontSize: 'var(--font-xxs)',
   fontFamily: "'DM Mono', monospace",
   color: 'var(--text-secondary)',
   marginBottom: '6px',
@@ -479,5 +479,5 @@ const inputStyle: React.CSSProperties = {
   background: 'var(--bg-elevated)',
   color: 'var(--text-primary)',
   outline: 'none',
-  fontSize: '14px',
+  fontSize: 'var(--font-body)',
 };

@@ -154,10 +154,10 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
             background: 'var(--bg-card)', padding: '32px', borderRadius: '4px', width: '90%', maxWidth: '400px',
             border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)'
           }}>
-            <h2 style={{ marginBottom: '16px', fontSize: '20px', fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
+            <h2 style={{ marginBottom: '16px', fontSize: 'var(--font-title)', fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
               Delete Category?
             </h2>
-            <p style={{ marginBottom: '24px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+            <p style={{ marginBottom: '24px', fontSize: 'var(--font-body)', color: 'var(--text-secondary)' }}>
               Are you sure you want to delete the <strong>{categoryToDelete.name}</strong> category? This action cannot be undone.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
@@ -190,14 +190,14 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
         <h2
           style={{
             fontFamily: "'DM Serif Display', serif",
-            fontSize: '24px',
+            fontSize: 'var(--font-value-lg)',
             marginBottom: '4px',
             color: 'var(--text-primary)',
           }}
         >
           Add Income
         </h2>
-        <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+        <p style={{ fontSize: 'var(--font-small)', color: 'var(--text-secondary)' }}>
           Track your earnings
         </p>
       </div>
@@ -234,7 +234,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
             />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: '14px', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: 'var(--font-body)', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
             {loading ? 'ADDING INCOME...' : addingCatLoading ? 'SAVING CATEGORY...' : 'DELETING CATEGORY...'}
           </div>
         </div>
@@ -265,7 +265,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
               style={{
                 ...inputStyle,
                 fontFamily: "'DM Mono', monospace",
-                fontSize: '16px',
+                fontSize: 'var(--font-value)',
               }}
             />
           </div>
@@ -288,7 +288,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
             <button 
               type="button" 
               onClick={() => setIsAddingCategory(!isAddingCategory)}
-              style={{ background: 'none', border: 'none', color: '#22c55e', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: "'DM Mono', monospace" }}
+              style={{ background: 'none', border: 'none', color: '#22c55e', cursor: 'pointer', fontSize: 'var(--font-xs)', fontWeight: 600, fontFamily: "'DM Mono', monospace" }}
             >
               {isAddingCategory ? 'Cancel' : '+ New Category'}
             </button>
@@ -355,7 +355,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
                       background: isSelected ? `${cat.color}18` : 'var(--bg-elevated)',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
-                      fontSize: '11px',
+                      fontSize: 'var(--font-xxs)',
                       fontFamily: "'DM Mono', monospace",
                       color: isSelected ? cat.color : 'var(--text-secondary)'
                     }}
@@ -375,7 +375,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
                           borderRadius: '50%',
                           width: '20px',
                           height: '20px',
-                          fontSize: '10px',
+                          fontSize: 'var(--font-xs)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -391,7 +391,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
                         {deletingCatId === cat.id ? '...' : '×'}
                       </button>
                     )}
-                    <span style={{ fontSize: '18px', lineHeight: 1, flexShrink: 0 }}>{cat.icon}</span>
+                    <span style={{ fontSize: 'var(--font-icon-sm)', lineHeight: 1, flexShrink: 0 }}>{cat.icon}</span>
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', display: 'block', textAlign: 'center' }}>{cat.name}</span>
                   </div>
                 );
@@ -409,7 +409,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
               background: 'var(--danger-dim)',
               border: '1px solid rgba(224, 85, 85, 0.2)',
               color: 'var(--danger)',
-              fontSize: '13px',
+              fontSize: 'var(--font-small)',
             }}
           >
             {error}
@@ -425,7 +425,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
               background: 'rgba(34, 197, 94, 0.1)',
               border: '1px solid rgba(34, 197, 94, 0.2)',
               color: '#22c55e',
-              fontSize: '13px',
+              fontSize: 'var(--font-small)',
             }}
           >
             Income added successfully!
@@ -444,7 +444,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
             color: loading ? '#22c55e' : '#fff',
             fontFamily: "'DM Mono', monospace",
             fontWeight: 600,
-            fontSize: '14px',
+            fontSize: 'var(--font-body)',
             cursor: loading ? 'not-allowed' : 'pointer',
             transition: 'background 0.2s',
           }}
@@ -458,7 +458,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
-  fontSize: '11px',
+  fontSize: 'var(--font-xxs)',
   fontFamily: "'DM Mono', monospace",
   color: 'var(--text-secondary)',
   marginBottom: '6px',
@@ -474,5 +474,5 @@ const inputStyle: React.CSSProperties = {
   background: 'var(--bg-elevated)',
   color: 'var(--text-primary)',
   outline: 'none',
-  fontSize: '14px',
+  fontSize: 'var(--font-body)',
 };

@@ -75,8 +75,8 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.4 }}>📊</div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+        <div style={{ fontSize: 'var(--font-icon)', marginBottom: '16px', opacity: 0.4 }}>📊</div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-body)' }}>
           No expenses yet. Add your first one!
         </p>
       </div>
@@ -102,10 +102,10 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
             background: 'var(--bg-card)', padding: '32px', borderRadius: '4px', width: '90%', maxWidth: '400px',
             border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)', textAlign: 'left'
           }}>
-            <h2 style={{ marginBottom: '16px', fontSize: '20px', fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
+            <h2 style={{ marginBottom: '16px', fontSize: 'var(--font-title)', fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
               Delete Expense?
             </h2>
-            <p style={{ marginBottom: '24px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+            <p style={{ marginBottom: '24px', fontSize: 'var(--font-body)', color: 'var(--text-secondary)' }}>
               Are you sure you want to delete <strong>{expenseToDelete.title}</strong>? This action cannot be undone.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
@@ -167,7 +167,7 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
             />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: '14px', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
+          <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: 'var(--font-body)', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
             DELETING EXPENSE...
           </div>
         </div>
@@ -206,7 +206,7 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
             >
               <div
                 style={{
-                  fontSize: '13px',
+                  fontSize: 'var(--font-small)',
                   fontWeight: 600,
                   color: 'var(--text-secondary)',
                   letterSpacing: '0.02em',
@@ -216,7 +216,7 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
               </div>
               <div
                 style={{
-                  fontSize: '12px',
+                  fontSize: 'var(--font-xs)',
                   background: 'var(--bg-elevated)',
                   border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
                   padding: '3px 10px',
@@ -238,12 +238,12 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
                 borderBottom: '3px solid var(--border)',
               }}
             >
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-secondary)' }}>
                 Daily Total
               </span>
               <span
                 style={{
-                  fontSize: '14px',
+                  fontSize: 'var(--font-body)',
                   fontFamily: "'DM Mono', monospace",
                   color: 'var(--accent)',
                 }}
@@ -285,7 +285,7 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
                     <CategoryBadge categoryName={expense.category} categories={categories} size="sm" />
                     <span
                       style={{
-                        fontSize: '13px',
+                        fontSize: 'var(--font-small)',
                         color: expense.title ? 'var(--text-primary)' : 'var(--text-muted)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -307,7 +307,7 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
                 >
                   <span
                     style={{
-                      fontSize: '14px',
+                      fontSize: 'var(--font-body)',
                       fontFamily: "'DM Mono', monospace",
                       color: 'var(--text-primary)',
                       letterSpacing: '-0.02em',
@@ -324,7 +324,7 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
                       border: 'none',
                       cursor: deletingId === expense.id ? 'default' : 'pointer',
                       color: 'var(--text-muted)',
-                      fontSize: '14px',
+                      fontSize: 'var(--font-body)',
                       padding: '4px',
                       lineHeight: 1,
                       transition: 'color 0.15s ease',

@@ -30,6 +30,18 @@
   --brutal-shadow: 4px 4px 0px 0px #000000;
   --brutal-shadow-sm: 2px 2px 0px 0px #000000;
   --brutal-border: 3px solid #000000;
+
+  --font-hero: 36px;
+  --font-title: 20px;
+  --font-card-title: 18px;
+  --font-body: 14px;
+  --font-small: 13px;
+  --font-xs: 12px;
+  --font-xxs: 11px;
+  --font-value: 16px;
+  --font-value-lg: 24px;
+  --font-icon: 48px;
+  --font-icon-sm: 18px;
 }
 
 * {
@@ -64,4 +76,91 @@ body {
 }
 
 .cat-container:hover .cat-delete-btn { opacity: 1 !important; }
+
+.stats-header {
+  font-size: var(--font-xxs);
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.stats-container {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.stat-label {
+  font-size: var(--font-xxs);
+  font-family: 'DM Mono', monospace;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+}
+
+.stat-value {
+  font-family: 'DM Serif Display', serif;
+  font-size: var(--font-value);
+}
+
+.stat-label-short { display: none; }
+.stat-label-full { display: inline; }
+
+.tabs-container {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-card);
+  border: 3px solid var(--border);
+  box-shadow: var(--brutal-shadow);
+  border-radius: 4px;
+  padding: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (max-width: 480px) {
+  :root {
+    --font-hero: 28px;
+    --font-title: 18px;
+    --font-card-title: 16px;
+    --font-body: 13px;
+    --font-small: 12px;
+    --font-xs: 11px;
+    --font-xxs: 10px;
+    --font-value: 13px;
+    --font-value-lg: 20px;
+    --font-icon: 36px;
+    --font-icon-sm: 16px;
+  }
+
+  .stats-header { font-size: 10px; }
+  .stats-container { gap: 4px; }
+  .stat-label { font-size: 9px; }
+  .stat-value { font-size: 11px; }
+  .stat-label-short { display: inline; }
+  .stat-label-full { display: none; }
+
+  .tabs-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .tabs-container button {
+    width: 100%;
+  }
+}
 

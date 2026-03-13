@@ -236,8 +236,8 @@ export default function Home() {
             background: 'var(--bg-card)', padding: '32px', borderRadius: '4px', width: '90%', maxWidth: '400px',
             border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)'
           }}>
-            <h2 style={{ marginBottom: '16px', fontSize: '20px' }}>Setup Deployment ID</h2>
-            <p style={{ marginBottom: '20px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+            <h2 style={{ marginBottom: '16px', fontSize: 'var(--font-title)' }}>Setup Deployment ID</h2>
+            <p style={{ marginBottom: '20px', fontSize: 'var(--font-body)', color: 'var(--text-secondary)' }}>
               Please enter your Apps Script Deployment ID to connect to your Google Sheet.
             </p>
             <input
@@ -300,7 +300,7 @@ export default function Home() {
           <div>
             <div
               style={{
-                fontSize: '11px',
+                fontSize: 'var(--font-xxs)',
                 fontFamily: "'DM Mono', monospace",
                 color: 'var(--accent)',
                 letterSpacing: '0.12em',
@@ -313,7 +313,7 @@ export default function Home() {
             <h1
               style={{
                 fontFamily: "'DM Serif Display', serif",
-                fontSize: '36px',
+                fontSize: 'var(--font-hero)',
                 fontWeight: 400,
                 lineHeight: 1.1,
                 color: 'var(--text-primary)',
@@ -323,91 +323,47 @@ export default function Home() {
             </h1>
           </div>
 
-          <div style={{ 
-            textAlign: 'center', 
-            display: 'flex', 
-            flexDirection: 'row',
-            flexWrap: 'nowrap',
-            gap: '12px',
-            width: '100%',
-            justifyContent: 'space-between'
-          }}>
-            <div style={{ minWidth: 'fit-content', textAlign: 'center', flex: 1 }}>
-              <div
-                style={{
-                  fontSize: '10px',
-                  fontFamily: "'DM Mono', monospace",
-                  color: 'var(--text-muted)',
-                  marginBottom: '4px',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                This Month&apos;s Income
+          <div style={{ width: '100%' }}>
+            <div className="stats-header">Monthly Summary</div>
+            <div className="stats-container">
+              <div className="stat-item">
+                <div className="stat-label">
+                  <span className="stat-label-full">This Month&apos;s Income</span>
+                  <span className="stat-label-short">Income</span>
+                </div>
+                <div className="stat-value" style={{ color: '#22c55e' }}>
+                  {new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0,
+                  }).format(currentMonthIncome)}
+                </div>
               </div>
-              <div
-                style={{
-                  fontFamily: "'DM Serif Display', serif",
-                  fontSize: '16px',
-                  color: '#22c55e',
-                }}
-              >
-                {new Intl.NumberFormat('id-ID', {
-                  style: 'currency',
-                  currency: 'IDR',
-                  minimumFractionDigits: 0,
-                }).format(currentMonthIncome)}
+              <div className="stat-item">
+                <div className="stat-label">
+                  <span className="stat-label-full">This Month&apos;s Spending</span>
+                  <span className="stat-label-short">Spending</span>
+                </div>
+                <div className="stat-value" style={{ color: currentMonthTotal > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
+                  {new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0,
+                  }).format(currentMonthTotal)}
+                </div>
               </div>
-            </div>
-            <div style={{ minWidth: 'fit-content', textAlign: 'center', flex: 1 }}>
-              <div
-                style={{
-                  fontSize: '10px',
-                  fontFamily: "'DM Mono', monospace",
-                  color: 'var(--text-muted)',
-                  marginBottom: '4px',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                This Month&apos;s Spending
-              </div>
-              <div
-                style={{
-                  fontFamily: "'DM Serif Display', serif",
-                  fontSize: '16px',
-                  color: currentMonthTotal > 0 ? 'var(--accent)' : 'var(--text-muted)',
-                }}
-              >
-                {new Intl.NumberFormat('id-ID', {
-                  style: 'currency',
-                  currency: 'IDR',
-                  minimumFractionDigits: 0,
-                }).format(currentMonthTotal)}
-              </div>
-            </div>
-            <div style={{ minWidth: 'fit-content', textAlign: 'center', flex: 1 }}>
-              <div
-                style={{
-                  fontSize: '10px',
-                  fontFamily: "'DM Mono', monospace",
-                  color: 'var(--text-muted)',
-                  marginBottom: '4px',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                Net Balance
-              </div>
-              <div
-                style={{
-                  fontFamily: "'DM Serif Display', serif",
-                  fontSize: '16px',
-                  color: netBalance >= 0 ? '#22c55e' : 'var(--danger)',
-                }}
-              >
-                {new Intl.NumberFormat('id-ID', {
-                  style: 'currency',
-                  currency: 'IDR',
-                  minimumFractionDigits: 0,
-                }).format(netBalance)}
+              <div className="stat-item">
+                <div className="stat-label">
+                  <span className="stat-label-full">Net Balance</span>
+                  <span className="stat-label-short">Net</span>
+                </div>
+                <div className="stat-value" style={{ color: netBalance >= 0 ? '#22c55e' : 'var(--danger)' }}>
+                  {new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    minimumFractionDigits: 0,
+                  }).format(netBalance)}
+                </div>
               </div>
             </div>
           </div>
@@ -421,7 +377,7 @@ export default function Home() {
               background: 'var(--danger-dim)',
               border: '1px solid rgba(224, 85, 85, 0.25)',
               color: 'var(--danger)',
-              fontSize: '13px',
+              fontSize: 'var(--font-small)',
               marginBottom: '24px',
               display: 'flex',
               alignItems: 'center',
@@ -439,7 +395,7 @@ export default function Home() {
                 color: 'var(--danger)',
                 borderRadius: '6px',
                 padding: '4px 10px',
-                fontSize: '12px',
+                fontSize: 'var(--font-xs)',
                 cursor: 'pointer',
                 fontFamily: "'DM Mono', monospace",
                 whiteSpace: 'nowrap',
@@ -451,15 +407,12 @@ export default function Home() {
         )}
 
         <div
+          className="tabs-container"
           style={{
-            display: 'flex',
-            gap: '4px',
             marginBottom: '24px',
-            background: 'var(--bg-card)',
-            border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-            borderRadius: '4px',
-            padding: '4px',
-            width: '100%', maxWidth: 'fit-content', flexWrap: 'wrap', justifyContent: 'center', margin: '0 auto 24px',
+            width: '100%',
+            maxWidth: 'fit-content',
+            margin: '0 auto 24px',
           }}
         >
           {(
@@ -479,7 +432,7 @@ export default function Home() {
                 border: 'none',
                 background: tab === id ? (id === 'add-income' ? '#22c55e' : 'var(--accent)') : 'transparent',
                 color: tab === id ? (id === 'add-income' ? '#fff' : '#0d0d0f') : 'var(--text-secondary)',
-                fontSize: '13px',
+fontSize: 'var(--font-small)',
                 fontWeight: tab === id ? 600 : 500,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
@@ -497,7 +450,7 @@ export default function Home() {
             border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)'
           }}>
             <div style={{ flex: '1 1 140px' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
+              <label style={{ display: 'block', fontSize: 'var(--font-xxs)', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
                 Filter Month
               </label>
               <input
@@ -514,7 +467,7 @@ export default function Home() {
             </div>
             {tab === 'history' && (
               <div style={{ flex: '1 1 140px' }}>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
+                <label style={{ display: 'block', fontSize: 'var(--font-xxs)', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
                   Filter Category
                 </label>
                 <select
@@ -553,7 +506,7 @@ export default function Home() {
             )}
             {tab === 'history' && (
               <div style={{ flex: '1 1 140px' }}>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
+                <label style={{ display: 'block', fontSize: 'var(--font-xxs)', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
                   Show
                 </label>
                 <select
@@ -574,7 +527,7 @@ export default function Home() {
             )}
             {tab === 'summary' && (
               <div style={{ flex: '1 1 140px' }}>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
+                <label style={{ display: 'block', fontSize: 'var(--font-xxs)', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
                   View
                 </label>
                 <select
@@ -612,7 +565,7 @@ export default function Home() {
               <>
                 {(historyFilter === 'all' || historyFilter === 'expense') && (
                   <div style={{ gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
-                    <h3 style={{ marginBottom: '12px', fontSize: '16px', color: 'var(--text-secondary)', fontFamily: "'DM Mono', monospace" }}>
+                    <h3 style={{ marginBottom: '12px', fontSize: 'var(--font-value)', color: 'var(--text-secondary)', fontFamily: "'DM Mono', monospace" }}>
                       💸 Expenses
                     </h3>
                     <ExpenseList expenses={expenses} categories={categories} onDelete={handleDeleteExpense} />
@@ -620,7 +573,7 @@ export default function Home() {
                 )}
                 {(historyFilter === 'all' || historyFilter === 'income') && (
                   <div style={{ gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
-                    <h3 style={{ marginBottom: '12px', fontSize: '16px', color: '#22c55e', fontFamily: "'DM Mono', monospace" }}>
+                    <h3 style={{ marginBottom: '12px', fontSize: 'var(--font-value)', color: '#22c55e', fontFamily: "'DM Mono', monospace" }}>
                       💰 Income
                     </h3>
                     <IncomeList incomes={incomes} categories={incomeCategories} onDelete={handleDeleteIncome} />
@@ -655,7 +608,7 @@ export default function Home() {
         >
           <span
             style={{
-              fontSize: '11px',
+              fontSize: 'var(--font-xxs)',
               fontFamily: "'DM Mono', monospace",
               color: 'var(--text-muted)',
             }}
@@ -675,7 +628,7 @@ export default function Home() {
                 padding: '5px 12px',
                 cursor: 'pointer',
                 color: 'var(--text-muted)',
-                fontSize: '11px',
+                fontSize: 'var(--font-xxs)',
                 fontFamily: "'DM Mono', monospace",
                 transition: 'all 0.15s ease',
               }}
@@ -706,7 +659,7 @@ export default function Home() {
                 padding: '5px 12px',
                 cursor: 'pointer',
                 color: 'var(--text-muted)',
-                fontSize: '11px',
+                fontSize: 'var(--font-xxs)',
                 fontFamily: "'DM Mono', monospace",
                 transition: 'all 0.15s ease',
               }}
@@ -760,7 +713,7 @@ function GlobalLoadingOverlay() {
             />
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
-      <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: '14px', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
+      <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: 'var(--font-body)', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
         PROCESSING...
       </div>
     </div>
