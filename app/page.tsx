@@ -1,24 +1,33 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Expense, CategoryData, CATEGORIES as DEFAULT_CATEGORIES } from '@/lib/types';
+import { Expense, Income, CategoryData, CATEGORIES as DEFAULT_CATEGORIES, INCOME_CATEGORIES as DEFAULT_INCOME_CATEGORIES } from '@/lib/types';
 import { AddExpenseForm } from '@/components/AddExpenseForm';
+import { AddIncomeForm } from '@/components/AddIncomeForm';
 import { ExpenseList } from '@/components/ExpenseList';
+import { IncomeList } from '@/components/IncomeList';
 import { SummaryDashboard } from '@/components/SummaryDashboard';
 
-type Tab = 'add' | 'history' | 'summary';
+type Tab = 'add-expense' | 'add-income' | 'history' | 'summary';
+type HistoryFilter = 'all' | 'expense' | 'income';
+type SummaryView = 'combined' | 'separate';
 
 export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [incomes, setIncomes] = useState<Income[]>([]);
   const [categories, setCategories] = useState<CategoryData[]>([]);
+  const [incomeCategories, setIncomeCategories] = useState<CategoryData[]>([]);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  const [tab, setTab] = useState<Tab>('add');
+  const [tab, setTab] = useState<Tab>('add-expense');
   const [filterMonth, setFilterMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const [filterCategory, setFilterCategory] = useState('');
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
+  const [summaryView, setSummaryView] = useState<SummaryView>('combined');
   const [currentMonthTotal, setCurrentMonthTotal] = useState(0);
+  const [currentMonthIncome, setCurrentMonthIncome] = useState(0);
   
   const [showDeploymentDialog, setShowDeploymentDialog] = useState(false);
   const [deploymentIdInput, setDeploymentIdInput] = useState('');
@@ -43,6 +52,22 @@ export default function Home() {
     }
   }, []);
 
+  const fetchIncomeCategories = useCallback(async () => {
+    const deploymentId = getDeploymentId();
+    if (!deploymentId) return;
+    try {
+      const res = await fetch('/api/income-categories', {
+        headers: { 'x-deployment-id': deploymentId }
+      });
+      const data = await res.json();
+      if (res.ok && data.categories) {
+        setIncomeCategories(data.categories);
+      }
+    } catch (err) {
+      console.error('Failed to fetch income categories:', err);
+    }
+  }, []);
+
   const fetchMonthlyTotal = useCallback(async () => {
     const deploymentId = getDeploymentId();
     if (!deploymentId) return;
@@ -54,6 +79,23 @@ export default function Home() {
       const data = await res.json();
       if (res.ok && data.total !== undefined) {
         setCurrentMonthTotal(data.total);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
+  const fetchMonthlyIncome = useCallback(async () => {
+    const deploymentId = getDeploymentId();
+    if (!deploymentId) return;
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      const res = await fetch(`/api/incomes/monthly-total?month=${currentMonth}`, {
+        headers: { 'x-deployment-id': deploymentId }
+      });
+      const data = await res.json();
+      if (res.ok && data.total !== undefined) {
+        setCurrentMonthIncome(data.total);
       }
     } catch (err) {
       console.error(err);
@@ -89,21 +131,55 @@ export default function Home() {
     }
   }, [filterMonth, filterCategory]);
 
+  const fetchIncomes = useCallback(async () => {
+    const deploymentId = getDeploymentId();
+    if (!deploymentId) return;
+    try {
+      const params = new URLSearchParams();
+      if (filterMonth) params.set('month', filterMonth);
+      
+      const url = '/api/incomes' + (params.toString() ? '?' + params.toString() : '');
+      const res = await fetch(url, {
+        headers: { 'x-deployment-id': deploymentId }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to load incomes');
+      setIncomes(data.incomes);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [filterMonth]);
+
   useEffect(() => {
     fetchExpenses();
+    fetchIncomes();
     fetchMonthlyTotal();
+    fetchMonthlyIncome();
     fetchCategories();
-  }, [fetchExpenses, fetchMonthlyTotal, fetchCategories]);
+    fetchIncomeCategories();
+  }, [fetchExpenses, fetchIncomes, fetchMonthlyTotal, fetchMonthlyIncome, fetchCategories, fetchIncomeCategories]);
 
-  const handleAdd = (expense: Expense) => {
+  const handleAddExpense = (expense: Expense) => {
     setExpenses((prev) => [expense, ...prev]);
     fetchMonthlyTotal();
   };
 
-  const handleDelete = (id: string) => {
+  const handleDeleteExpense = (id: string) => {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
     fetchMonthlyTotal();
   };
+
+  const handleAddIncome = (income: Income) => {
+    setIncomes((prev) => [income, ...prev]);
+    fetchMonthlyIncome();
+  };
+
+  const handleDeleteIncome = (id: string) => {
+    setIncomes((prev) => prev.filter((i) => i.id !== id));
+    fetchMonthlyIncome();
+  };
+
+  const netBalance = currentMonthIncome - currentMonthTotal;
 
   return (
     <div
@@ -113,7 +189,6 @@ export default function Home() {
         color: 'var(--text-primary)',
       }}
     >
-      {/* Background blobs */}
       <div
         style={{
           position: 'fixed',
@@ -182,8 +257,11 @@ export default function Home() {
                   localStorage.setItem('APPS_SCRIPT_DEPLOYMENT_ID', deploymentIdInput.trim());
                   setShowDeploymentDialog(false);
                   fetchExpenses();
+                  fetchIncomes();
                   fetchCategories();
+                  fetchIncomeCategories();
                   fetchMonthlyTotal();
+                  fetchMonthlyIncome();
                 }}
                 style={{
                   padding: '10px 20px', background: 'var(--accent)', color: '#000',
@@ -206,15 +284,17 @@ export default function Home() {
           padding: '16px 16px 64px',
         }}
       >
-        {/* Header */}
         <header
           style={{
             display: 'flex',
-            alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px',
+            alignItems: 'flex-start', 
+            flexWrap: 'wrap', 
+            gap: '16px',
             justifyContent: 'space-between',
             marginBottom: '36px',
             paddingBottom: '24px',
             borderBottom: '3px solid var(--border)',
+            flexDirection: 'column',
           }}
         >
           <div>
@@ -243,35 +323,96 @@ export default function Home() {
             </h1>
           </div>
 
-          <div style={{ textAlign: 'right' }}>
-            <div
-              style={{
-                fontSize: '11px',
-                fontFamily: "'DM Mono', monospace",
-                color: 'var(--text-muted)',
-                marginBottom: '4px',
-                letterSpacing: '0.06em',
-              }}
-            >
-              This Month's Spending
+          <div style={{ 
+            textAlign: 'center', 
+            display: 'flex', 
+            flexDirection: 'row',
+            flexWrap: 'nowrap',
+            gap: '12px',
+            width: '100%',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{ minWidth: 'fit-content', textAlign: 'center', flex: 1 }}>
+              <div
+                style={{
+                  fontSize: '10px',
+                  fontFamily: "'DM Mono', monospace",
+                  color: 'var(--text-muted)',
+                  marginBottom: '4px',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                This Month&apos;s Income
+              </div>
+              <div
+                style={{
+                  fontFamily: "'DM Serif Display', serif",
+                  fontSize: '16px',
+                  color: '#22c55e',
+                }}
+              >
+                {new Intl.NumberFormat('id-ID', {
+                  style: 'currency',
+                  currency: 'IDR',
+                  minimumFractionDigits: 0,
+                }).format(currentMonthIncome)}
+              </div>
             </div>
-            <div
-              style={{
-                fontFamily: "'DM Serif Display', serif",
-                fontSize: '24px',
-                color: currentMonthTotal > 0 ? 'var(--accent)' : 'var(--text-muted)',
-              }}
-            >
-              {new Intl.NumberFormat('id-ID', {
-                style: 'currency',
-                currency: 'IDR',
-                minimumFractionDigits: 0,
-              }).format(currentMonthTotal)}
+            <div style={{ minWidth: 'fit-content', textAlign: 'center', flex: 1 }}>
+              <div
+                style={{
+                  fontSize: '10px',
+                  fontFamily: "'DM Mono', monospace",
+                  color: 'var(--text-muted)',
+                  marginBottom: '4px',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                This Month&apos;s Spending
+              </div>
+              <div
+                style={{
+                  fontFamily: "'DM Serif Display', serif",
+                  fontSize: '16px',
+                  color: currentMonthTotal > 0 ? 'var(--accent)' : 'var(--text-muted)',
+                }}
+              >
+                {new Intl.NumberFormat('id-ID', {
+                  style: 'currency',
+                  currency: 'IDR',
+                  minimumFractionDigits: 0,
+                }).format(currentMonthTotal)}
+              </div>
+            </div>
+            <div style={{ minWidth: 'fit-content', textAlign: 'center', flex: 1 }}>
+              <div
+                style={{
+                  fontSize: '10px',
+                  fontFamily: "'DM Mono', monospace",
+                  color: 'var(--text-muted)',
+                  marginBottom: '4px',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Net Balance
+              </div>
+              <div
+                style={{
+                  fontFamily: "'DM Serif Display', serif",
+                  fontSize: '16px',
+                  color: netBalance >= 0 ? '#22c55e' : 'var(--danger)',
+                }}
+              >
+                {new Intl.NumberFormat('id-ID', {
+                  style: 'currency',
+                  currency: 'IDR',
+                  minimumFractionDigits: 0,
+                }).format(netBalance)}
+              </div>
             </div>
           </div>
         </header>
 
-        {/* Error banner */}
         {error && (
           <div
             style={{
@@ -284,14 +425,14 @@ export default function Home() {
               marginBottom: '24px',
               display: 'flex',
               alignItems: 'center',
-justifyContent: 'space-between',
-gap: '12px',
-flexWrap: 'wrap',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
             }}
           >
             <span>{error}</span>
             <button
-              onClick={fetchExpenses}
+              onClick={() => { fetchExpenses(); fetchIncomes(); }}
               style={{
                 background: 'rgba(224, 85, 85, 0.15)',
                 border: '1px solid rgba(224, 85, 85, 0.3)',
@@ -309,7 +450,6 @@ flexWrap: 'wrap',
           </div>
         )}
 
-        {/* Tabs */}
         <div
           style={{
             display: 'flex',
@@ -324,7 +464,8 @@ flexWrap: 'wrap',
         >
           {(
             [
-              { id: 'add', label: 'Add Expense' },
+              { id: 'add-expense', label: 'Add Expense' },
+              { id: 'add-income', label: 'Add Income' },
               { id: 'history', label: 'History' },
               { id: 'summary', label: 'Summary' },
             ] as { id: Tab; label: string }[]
@@ -336,8 +477,8 @@ flexWrap: 'wrap',
                 padding: '8px 12px', flex: '1 1 auto',
                 borderRadius: '4px',
                 border: 'none',
-                background: tab === id ? 'var(--accent)' : 'transparent',
-                color: tab === id ? '#0d0d0f' : 'var(--text-secondary)',
+                background: tab === id ? (id === 'add-income' ? '#22c55e' : 'var(--accent)') : 'transparent',
+                color: tab === id ? (id === 'add-income' ? '#fff' : '#0d0d0f') : 'var(--text-secondary)',
                 fontSize: '13px',
                 fontWeight: tab === id ? 600 : 500,
                 cursor: 'pointer',
@@ -349,7 +490,6 @@ flexWrap: 'wrap',
           ))}
         </div>
 
-        {/* Filters */}
         {(tab === 'history' || tab === 'summary') && (
           <div style={{
             display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap',
@@ -372,37 +512,93 @@ flexWrap: 'wrap',
                 }}
               />
             </div>
-            <div style={{ flex: '1 1 140px' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
-                Filter Category
-              </label>
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                style={{
-                  width: '100%', padding: '8px 12px', borderRadius: '4px',
-                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                  background: 'var(--bg)', color: 'var(--text-primary)',
-                  fontFamily: "'DM Mono', monospace"
-                }}
-              >
-                <option value="">All Categories</option>
-                {categories.length > 0 
-                  ? categories.map(cat => (
-                      <option key={cat.id || cat.name} value={cat.name}>{cat.icon} {cat.name}</option>
-                    ))
-                  : DEFAULT_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                  ))
-                }
-              </select>
-            </div>
+            {tab === 'history' && (
+              <div style={{ flex: '1 1 140px' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
+                  Filter Category
+                </label>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  style={{
+                    width: '100%', padding: '8px 12px', borderRadius: '4px',
+                    border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
+                    background: 'var(--bg)', color: 'var(--text-primary)',
+                    fontFamily: "'DM Mono', monospace"
+                  }}
+                >
+                  <option value="">All Categories</option>
+                  <optgroup label="Expenses">
+                    {categories.length > 0 
+                      ? categories.map(cat => (
+                          <option key={cat.id || cat.name} value={cat.name}>{cat.icon} {cat.name}</option>
+                        ))
+                      : DEFAULT_CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                      ))
+                    }
+                  </optgroup>
+                  <optgroup label="Income">
+                    {incomeCategories.length > 0 
+                      ? incomeCategories.map(cat => (
+                          <option key={cat.id || cat.name} value={cat.name}>{cat.icon} {cat.name}</option>
+                        ))
+                      : DEFAULT_INCOME_CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                      ))
+                    }
+                  </optgroup>
+                </select>
+              </div>
+            )}
+            {tab === 'history' && (
+              <div style={{ flex: '1 1 140px' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
+                  Show
+                </label>
+                <select
+                  value={historyFilter}
+                  onChange={(e) => setHistoryFilter(e.target.value as HistoryFilter)}
+                  style={{
+                    width: '100%', padding: '8px 12px', borderRadius: '4px',
+                    border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
+                    background: 'var(--bg)', color: 'var(--text-primary)',
+                    fontFamily: "'DM Mono', monospace"
+                  }}
+                >
+                  <option value="all">All</option>
+                  <option value="expense">Expenses Only</option>
+                  <option value="income">Income Only</option>
+                </select>
+              </div>
+            )}
+            {tab === 'summary' && (
+              <div style={{ flex: '1 1 140px' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
+                  View
+                </label>
+                <select
+                  value={summaryView}
+                  onChange={(e) => setSummaryView(e.target.value as SummaryView)}
+                  style={{
+                    width: '100%', padding: '8px 12px', borderRadius: '4px',
+                    border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
+                    background: 'var(--bg)', color: 'var(--text-primary)',
+                    fontFamily: "'DM Mono', monospace"
+                  }}
+                >
+                  <option value="combined">Combined (Net Balance)</option>
+                  <option value="separate">Separate</option>
+                </select>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Content */}
-        {tab === 'add' ? (
-          <AddExpenseForm categories={categories} onAdd={handleAdd} onRefreshCategories={fetchCategories} />
+        {tab === 'add-expense' ? (
+          <AddExpenseForm categories={categories} onAdd={handleAddExpense} onRefreshCategories={fetchCategories} />
+        ) : tab === 'add-income' ? (
+          <AddIncomeForm categories={incomeCategories} onAdd={handleAddIncome} onRefreshCategories={fetchIncomeCategories} />
         ) : (
           <div
             style={{
@@ -413,13 +609,35 @@ flexWrap: 'wrap',
             }}
           >
             {tab === 'history' && (
-              <div style={{ gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
-                <ExpenseList expenses={expenses} categories={categories} onDelete={handleDelete} />
-              </div>
+              <>
+                {(historyFilter === 'all' || historyFilter === 'expense') && (
+                  <div style={{ gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
+                    <h3 style={{ marginBottom: '12px', fontSize: '16px', color: 'var(--text-secondary)', fontFamily: "'DM Mono', monospace" }}>
+                      💸 Expenses
+                    </h3>
+                    <ExpenseList expenses={expenses} categories={categories} onDelete={handleDeleteExpense} />
+                  </div>
+                )}
+                {(historyFilter === 'all' || historyFilter === 'income') && (
+                  <div style={{ gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
+                    <h3 style={{ marginBottom: '12px', fontSize: '16px', color: '#22c55e', fontFamily: "'DM Mono', monospace" }}>
+                      💰 Income
+                    </h3>
+                    <IncomeList incomes={incomes} categories={incomeCategories} onDelete={handleDeleteIncome} />
+                  </div>
+                )}
+              </>
             )}
             {tab === 'summary' && (
                <div style={{ gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
-                  <SummaryDashboard expenses={expenses} categories={categories} filterMonth={filterMonth} />
+                  <SummaryDashboard 
+                    expenses={expenses} 
+                    incomes={incomes}
+                    categories={categories} 
+                    incomeCategories={incomeCategories}
+                    filterMonth={filterMonth}
+                    view={summaryView}
+                  />
                </div>
             )}
           </div>
@@ -475,8 +693,11 @@ flexWrap: 'wrap',
             <button
               onClick={() => {
                 fetchExpenses();
+                fetchIncomes();
                 fetchMonthlyTotal();
+                fetchMonthlyIncome();
                 fetchCategories();
+                fetchIncomeCategories();
               }}
               style={{
                 background: 'none',
@@ -507,24 +728,6 @@ flexWrap: 'wrap',
   );
 }
 
-function LoadingSpinner() {
-  return (
-    <div
-      style={{
-        width: '14px',
-        height: '14px',
-        border: '3px solid var(--border)',
-        borderTopColor: 'var(--accent)',
-        borderRadius: '50%',
-        animation: 'spin 0.8s linear infinite',
-      }}
-    >
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-}
-
-
 function GlobalLoadingOverlay() {
   return (
     <div style={{
@@ -538,7 +741,6 @@ function GlobalLoadingOverlay() {
               height: '44px',
             }}
           >
-            {/* Static background circle to hold the shadow cleanly */}
             <div style={{
               position: 'absolute', inset: 0,
               border: '4px solid var(--border)',
@@ -546,7 +748,6 @@ function GlobalLoadingOverlay() {
               boxShadow: 'var(--brutal-shadow)',
               background: 'var(--bg-elevated)',
             }} />
-            {/* Spinning element with no shadow */}
             <div
               style={{
                 position: 'absolute', inset: 0,

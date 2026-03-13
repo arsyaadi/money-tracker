@@ -1,8 +1,8 @@
 import { headers } from 'next/headers';
-import type { Category, Expense, CategoryData } from './types';
+import type { Category, Expense, Income, CategoryData } from './types';
 
-export { CATEGORIES } from './types';
-export type { Category, Expense, CategoryData } from './types';
+export { CATEGORIES, INCOME_CATEGORIES } from './types';
+export type { Category, Expense, Income, CategoryData } from './types';
 
 async function getAppsScriptUrl(): Promise<string> {
   const headersList = await headers();
@@ -138,5 +138,75 @@ export async function getCategoryTotals(month?: string) {
 
 export async function getMonthlyTotal(month: string) {
   const data = await appsScriptFetch<any>({ action: 'getMonthlyTotal', month });
+  return data;
+}
+
+// ===== INCOME FUNCTIONS =====
+
+export async function getIncomeCategories(): Promise<CategoryData[]> {
+  const data = await appsScriptFetch<any>({
+    action: 'getIncomeCategories',
+  });
+  return data.categories || [];
+}
+
+export async function addIncomeCategory(
+  category: Omit<CategoryData, 'id'>
+): Promise<CategoryData> {
+  const { category: created } = await appsScriptFetch<{ category: CategoryData }>(
+    null,
+    { action: 'addIncomeCategory', category }
+  );
+  return created;
+}
+
+export async function deleteIncomeCategory(id: string): Promise<void> {
+  await appsScriptFetch<{ success: boolean }>(null, {
+    action: 'deleteIncomeCategory',
+    id,
+  });
+}
+
+export async function getIncomes(month?: string, category?: string): Promise<Income[]> {
+  const { incomes } = await appsScriptFetch<{ incomes: any[] }>({
+    action: 'getIncomes', ...(month && { month }), ...(category && { category })
+  });
+  
+  return incomes.map(i => ({
+    id: i.id,
+    title: i.title,
+    amount: i.amount,
+    category: i.category,
+    date: i.createdAt ? i.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+  }));
+}
+
+export async function addIncome(
+  income: Omit<Income, 'id' | 'createdAt' | 'date'> & { date: string }
+): Promise<Income> {
+  const { income: created } = await appsScriptFetch<{ income: any }>(
+    null,
+    { action: 'addIncome', income }
+  );
+  return {
+    ...created,
+    date: created.createdAt ? created.createdAt.split('T')[0] : income.date
+  };
+}
+
+export async function deleteIncome(id: string): Promise<void> {
+  await appsScriptFetch<{ success: boolean }>(null, {
+    action: 'deleteIncome',
+    id,
+  });
+}
+
+export async function getMonthlyIncomeTotal(month: string) {
+  const data = await appsScriptFetch<any>({ action: 'getMonthlyIncomeTotal', month });
+  return data;
+}
+
+export async function getIncomeCategoryTotals(month?: string) {
+  const data = await appsScriptFetch<any>({ action: 'getIncomeCategoryTotals', ...(month && { month }) });
   return data;
 }

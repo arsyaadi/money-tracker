@@ -15,6 +15,14 @@ export interface Expense {
   date: string; // YYYY-MM-DD
 }
 
+export interface Income {
+  id: string;
+  title: string;
+  amount: number;
+  category: string;
+  date: string; // YYYY-MM-DD
+}
+
 export const CATEGORIES: Category[] = [
   'Food',
   'Transport',
@@ -22,5 +30,13 @@ export const CATEGORIES: Category[] = [
   'Health',
   'Shopping',
   'Bills',
+  'Other',
+];
+
+export const INCOME_CATEGORIES: Category[] = [
+  'Salary',
+  'Freelance',
+  'Investment',
+  'Gift',
   'Other',
 ];
