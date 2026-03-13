@@ -3,25 +3,32 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "concurrently -p none 'serwist build --watch' 'next dev'",
+    "build": "next build && serwist build",
     "build:pages": "npx @cloudflare/next-on-pages",
     "start": "next start",
     "lint": "eslint",
     "deploy": "npm run build:pages && wrangler pages deploy .vercel/output/static --project-name=money-tracker"
   },
   "dependencies": {
+    "@serwist/next": "^9.5.6",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@serwist/cli": "^9.5.6",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/serviceworker": "^0.0.193",
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.27.4",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "serwist": "^9.5.6",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

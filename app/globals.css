@@ -130,6 +130,10 @@ body {
   justify-content: center;
 }
 
+.tabs-container button {
+  font-size: var(--font-small);
+}
+
 @media (max-width: 480px) {
   :root {
     --font-hero: 28px;
@@ -161,6 +165,7 @@ body {
 
   .tabs-container button {
     width: 100%;
+    font-size: 14px;
   }
 }
 

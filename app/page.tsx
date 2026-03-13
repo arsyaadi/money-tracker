@@ -410,8 +410,8 @@ export default function Home() {
           className="tabs-container"
           style={{
             marginBottom: '24px',
-            width: '100%',
-            maxWidth: 'fit-content',
+            width: '90%',
+            maxWidth: '400px',
             margin: '0 auto 24px',
           }}
         >
@@ -426,13 +426,12 @@ export default function Home() {
             <button
               key={id}
               onClick={() => setTab(id)}
-              style={{
+style={{
                 padding: '8px 12px', flex: '1 1 auto',
                 borderRadius: '4px',
                 border: 'none',
                 background: tab === id ? (id === 'add-income' ? '#22c55e' : 'var(--accent)') : 'transparent',
                 color: tab === id ? (id === 'add-income' ? '#fff' : '#0d0d0f') : 'var(--text-secondary)',
-fontSize: 'var(--font-small)',
                 fontWeight: tab === id ? 600 : 500,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
