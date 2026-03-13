@@ -33,6 +33,30 @@ export function SummaryDashboard({
 
   const periodLabel = filterMonth ? filterMonth : 'All Time';
 
+  const expenseByCategory = categories.reduce<Record<string, number>>((acc, cat) => {
+    acc[cat.name] = expenses
+      .filter((e) => e.category === cat.name)
+      .reduce((s, e) => s + e.amount, 0);
+    return acc;
+  }, {});
+
+  const incomeByCategory = incomeCategories.reduce<Record<string, number>>((acc, cat) => {
+    acc[cat.name] = incomes
+      .filter((i) => i.category === cat.name)
+      .reduce((s, i) => s + i.amount, 0);
+    return acc;
+  }, {});
+
+  const maxExpense = Math.max(...Object.values(expenseByCategory), 1);
+  const maxIncome = Math.max(...Object.values(incomeByCategory), 1);
+
+  const sortedExpenseCategories = [...categories].sort((a, b) => 
+    (expenseByCategory[b.name] ?? 0) - (expenseByCategory[a.name] ?? 0)
+  );
+  const sortedIncomeCategories = [...incomeCategories].sort((a, b) => 
+    (incomeByCategory[b.name] ?? 0) - (incomeByCategory[a.name] ?? 0)
+  );
+
   if (view === 'combined') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -129,26 +153,121 @@ export function SummaryDashboard({
             </div>
           </div>
         </div>
+
+        {totalIncome > 0 && (
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
+              borderRadius: '4px',
+              padding: '16px 16px',
+            }}
+          >
+            <h3
+              style={{
+                fontFamily: "'DM Serif Display', serif",
+                fontSize: 'var(--font-card-title)',
+                marginBottom: '8px',
+                color: '#22c55e',
+              }}
+            >
+              💰 Income Breakdown
+            </h3>
+            <p style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              {formatAmount(totalIncome)} total
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {sortedIncomeCategories.map((cat) => {
+                const val = incomeByCategory[cat.name] ?? 0;
+                if (val === 0) return null;
+                const pct = totalIncome > 0 ? (val / totalIncome) * 100 : 0;
+                const barPct = maxIncome > 0 ? (val / maxIncome) * 100 : 0;
+
+                return (
+                  <div key={cat.name}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '13px' }}>{cat.icon}</span>
+                        <span style={{ fontSize: 'var(--font-small)', color: 'var(--text-secondary)' }}>{cat.name}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: 'var(--font-xxs)', fontFamily: "'DM Mono', monospace", color: 'var(--text-muted)' }}>
+                          {pct.toFixed(1)}%
+                        </span>
+                        <span style={{ fontSize: 'var(--font-small)', fontFamily: "'DM Mono', monospace", color: '#22c55e', fontWeight: 500 }}>
+                          {formatAmount(val)}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ height: '3px', background: 'var(--bg-elevated)', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${barPct}%`, borderRadius: '2px', background: '#22c55e', transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {totalExpenses > 0 && (
+          <div
+            style={{
+              background: 'var(--bg-card)',
+              border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
+              borderRadius: '4px',
+              padding: '16px 16px',
+            }}
+          >
+            <h3
+              style={{
+                fontFamily: "'DM Serif Display', serif",
+                fontSize: 'var(--font-card-title)',
+                marginBottom: '8px',
+                color: 'var(--accent)',
+              }}
+            >
+              💸 Expense Breakdown
+            </h3>
+            <p style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              {formatAmount(totalExpenses)} total
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {sortedExpenseCategories.map((cat) => {
+                const val = expenseByCategory[cat.name] ?? 0;
+                if (val === 0) return null;
+                const pct = totalExpenses > 0 ? (val / totalExpenses) * 100 : 0;
+                const barPct = maxExpense > 0 ? (val / maxExpense) * 100 : 0;
+
+                return (
+                  <div key={cat.name}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '13px' }}>{cat.icon}</span>
+                        <span style={{ fontSize: 'var(--font-small)', color: 'var(--text-secondary)' }}>{cat.name}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: 'var(--font-xxs)', fontFamily: "'DM Mono', monospace", color: 'var(--text-muted)' }}>
+                          {pct.toFixed(1)}%
+                        </span>
+                        <span style={{ fontSize: 'var(--font-small)', fontFamily: "'DM Mono', monospace", color: cat.color, fontWeight: 500 }}>
+                          {formatAmount(val)}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ height: '3px', background: 'var(--bg-elevated)', borderRadius: '2px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${barPct}%`, borderRadius: '2px', background: cat.color, transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
-
-  const expenseByCategory = categories.reduce<Record<string, number>>((acc, cat) => {
-    acc[cat.name] = expenses
-      .filter((e) => e.category === cat.name)
-      .reduce((s, e) => s + e.amount, 0);
-    return acc;
-  }, {});
-
-  const incomeByCategory = incomeCategories.reduce<Record<string, number>>((acc, cat) => {
-    acc[cat.name] = incomes
-      .filter((i) => i.category === cat.name)
-      .reduce((s, i) => s + i.amount, 0);
-    return acc;
-  }, {});
-
-  const maxExpense = Math.max(...Object.values(expenseByCategory), 1);
-  const maxIncome = Math.max(...Object.values(incomeByCategory), 1);
 
   const topExpenseCategory = categories.reduce((top, cat) =>
     expenseByCategory[cat.name] > expenseByCategory[top.name] ? cat : top
@@ -188,7 +307,7 @@ export function SummaryDashboard({
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {incomeCategories.map((cat) => {
+            {sortedIncomeCategories.map((cat) => {
               const val = incomeByCategory[cat.name] ?? 0;
               if (val === 0) return null;
               const pct = totalIncome > 0 ? (val / totalIncome) * 100 : 0;
@@ -257,7 +376,7 @@ export function SummaryDashboard({
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {categories.map((cat) => {
+            {sortedExpenseCategories.map((cat) => {
               const val = expenseByCategory[cat.name] ?? 0;
               if (val === 0) return null;
               const pct = totalExpenses > 0 ? (val / totalExpenses) * 100 : 0;
