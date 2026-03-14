@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -p none 'serwist build --watch' 'next dev'",
-    "build": "next build",
-    "postbuild": "serwist build",
+    "build": "next build && serwist build",
+    "build:cf": "opennextjs-cloudflare build",
     "start": "next start",
     "lint": "eslint",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
