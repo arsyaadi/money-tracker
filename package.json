@@ -2,13 +2,15 @@
   "name": "money-tracker",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "concurrently -p none 'serwist build --watch' 'next dev'",
-    "build": "next build && serwist build",
-    "build:pages": "npx @cloudflare/next-on-pages",
+    "build": "next build",
+    "postbuild": "serwist build",
     "start": "next start",
     "lint": "eslint",
-    "deploy": "npm run build:pages && wrangler pages deploy .vercel/output/static --project-name=money-tracker"
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
   },
   "dependencies": {
     "@serwist/next": "^9.5.6",
@@ -17,6 +19,7 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.17.1",
     "@serwist/cli": "^9.5.6",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
@@ -30,6 +33,7 @@
     "serwist": "^9.5.6",
     "sharp": "^0.34.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.73.0"
   }
 }
