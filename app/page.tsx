@@ -7,10 +7,17 @@ import { AddIncomeForm } from '@/components/AddIncomeForm';
 import { ExpenseList } from '@/components/ExpenseList';
 import { IncomeList } from '@/components/IncomeList';
 import { SummaryDashboard } from '@/components/SummaryDashboard';
+import { SettingsModal } from '@/components/SettingsModal';
+import { initNotifications } from '@/lib/notifications';
 
 type Tab = 'add-expense' | 'add-income' | 'history' | 'summary';
 type HistoryFilter = 'all' | 'expense' | 'income';
 type SummaryView = 'combined' | 'separate';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -29,8 +36,8 @@ export default function Home() {
   const [currentMonthTotal, setCurrentMonthTotal] = useState(0);
   const [currentMonthIncome, setCurrentMonthIncome] = useState(0);
   
-  const [showDeploymentDialog, setShowDeploymentDialog] = useState(false);
-  const [deploymentIdInput, setDeploymentIdInput] = useState('');
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   const getDeploymentId = () => {
     return localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID') || '';
@@ -105,7 +112,7 @@ export default function Home() {
   const fetchExpenses = useCallback(async () => {
     const deploymentId = getDeploymentId();
     if (!deploymentId) {
-      setShowDeploymentDialog(true);
+      setShowSettingsModal(true);
       setLoading(false);
       return;
     }
@@ -158,6 +165,28 @@ export default function Home() {
     fetchCategories();
     fetchIncomeCategories();
   }, [fetchExpenses, fetchIncomes, fetchMonthlyTotal, fetchMonthlyIncome, fetchCategories, fetchIncomeCategories]);
+
+  useEffect(() => {
+    initNotifications();
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
+  };
 
   const handleAddExpense = (expense: Expense) => {
     setExpenses((prev) => [expense, ...prev]);
@@ -227,53 +256,18 @@ export default function Home() {
 
       {loading && <GlobalLoadingOverlay />}
 
-      {showDeploymentDialog && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)'
-        }}>
-          <div style={{
-            background: 'var(--bg-card)', padding: '32px', borderRadius: '4px', width: '90%', maxWidth: '400px',
-            border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)'
-          }}>
-            <h2 style={{ marginBottom: '16px', fontSize: 'var(--font-title)' }}>Setup Deployment ID</h2>
-            <p style={{ marginBottom: '20px', fontSize: 'var(--font-body)', color: 'var(--text-secondary)' }}>
-              Please enter your Apps Script Deployment ID to connect to your Google Sheet.
-            </p>
-            <input
-              type="text"
-              value={deploymentIdInput}
-              onChange={(e) => setDeploymentIdInput(e.target.value)}
-              placeholder="AKfycbx..."
-              style={{
-                width: '100%', padding: '12px', marginBottom: '20px', borderRadius: '4px',
-                border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)', background: 'var(--bg)', color: 'var(--text-primary)'
-              }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                onClick={() => {
-                  if (!deploymentIdInput.trim()) return;
-                  localStorage.setItem('APPS_SCRIPT_DEPLOYMENT_ID', deploymentIdInput.trim());
-                  setShowDeploymentDialog(false);
-                  fetchExpenses();
-                  fetchIncomes();
-                  fetchCategories();
-                  fetchIncomeCategories();
-                  fetchMonthlyTotal();
-                  fetchMonthlyIncome();
-                }}
-                style={{
-                  padding: '10px 20px', background: 'var(--accent)', color: '#000',
-                  border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 500
-                }}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        onDeploymentIdSave={() => {
+          fetchExpenses();
+          fetchIncomes();
+          fetchCategories();
+          fetchIncomeCategories();
+          fetchMonthlyTotal();
+          fetchMonthlyIncome();
+        }}
+      />
 
       <div
         style={{
@@ -297,7 +291,7 @@ export default function Home() {
             flexDirection: 'column',
           }}
         >
-          <div>
+          <div style={{ width: '100%' }}>
             <div
               style={{
                 fontSize: 'var(--font-xxs)',
@@ -603,77 +597,98 @@ style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexDirection: 'column',
+            gap: '16px',
           }}
         >
-          <span
-            style={{
-              fontSize: 'var(--font-xxs)',
-              fontFamily: "'DM Mono', monospace",
-              color: 'var(--text-muted)',
-            }}
-          >
-            Built for you 💖
-          </span>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={() => {
-                setDeploymentIdInput(getDeploymentId());
-                setShowDeploymentDialog(true);
-              }}
+          <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span
               style={{
-                background: 'none',
-                border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                borderRadius: '6px',
-                padding: '5px 12px',
-                cursor: 'pointer',
-                color: 'var(--text-muted)',
                 fontSize: 'var(--font-xxs)',
                 fontFamily: "'DM Mono', monospace",
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)';
-                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
-                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-              }}
-            >
-              ⚙️ Setup
-            </button>
-            <button
-              onClick={() => {
-                fetchExpenses();
-                fetchIncomes();
-                fetchMonthlyTotal();
-                fetchMonthlyIncome();
-                fetchCategories();
-                fetchIncomeCategories();
-              }}
-              style={{
-                background: 'none',
-                border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                borderRadius: '6px',
-                padding: '5px 12px',
-                cursor: 'pointer',
                 color: 'var(--text-muted)',
-                fontSize: 'var(--font-xxs)',
-                fontFamily: "'DM Mono', monospace",
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)';
-                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
-                (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
               }}
             >
-              ↻ Refresh
-            </button>
+              Built for you 💖
+            </span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => setShowSettingsModal(true)}
+                style={{
+                  background: 'none',
+                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
+                  borderRadius: '6px',
+                  padding: '5px 12px',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  fontSize: 'var(--font-xxs)',
+                  fontFamily: "'DM Mono', monospace",
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+                }}
+              >
+                ⚙️ Settings
+              </button>
+              <button
+                onClick={() => {
+                  fetchExpenses();
+                  fetchIncomes();
+                  fetchMonthlyTotal();
+                  fetchMonthlyIncome();
+                  fetchCategories();
+                  fetchIncomeCategories();
+                }}
+                style={{
+                  background: 'none',
+                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
+                  borderRadius: '6px',
+                  padding: '5px 12px',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  fontSize: 'var(--font-xxs)',
+                  fontFamily: "'DM Mono', monospace",
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+                }}
+              >
+                ↻ Refresh
+              </button>
+            </div>
           </div>
+
+          {installPrompt && (
+            <button
+              onClick={handleInstall}
+              style={{
+                background: 'var(--accent)',
+                border: 'none',
+                boxShadow: 'var(--brutal-shadow)',
+                borderRadius: '6px',
+                padding: '8px 20px',
+                cursor: 'pointer',
+                color: '#000',
+                fontSize: 'var(--font-xs)',
+                fontFamily: "'DM Mono', monospace",
+                fontWeight: 500,
+              }}
+            >
+              📥 Install App
+            </button>
+          )}
         </footer>
       </div>
     </div>

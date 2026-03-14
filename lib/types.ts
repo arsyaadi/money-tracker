@@ -40,3 +40,8 @@ export const INCOME_CATEGORIES: Category[] = [
   'Gift',
   'Other',
 ];
+
+export interface NotificationSettings {
+  enabled: boolean;
+  reminderTime: string;
+}
