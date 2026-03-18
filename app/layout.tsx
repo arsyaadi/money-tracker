@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { SerwistProvider } from "./serwist";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -13,12 +12,6 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Money Tracker",
   description: "Track your daily expenses with Google Sheets as backend",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Money Tracker",
-  },
   icons: {
     icon: [
       { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
@@ -35,9 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
-        <SerwistProvider swUrl="/sw.js">{children}</SerwistProvider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

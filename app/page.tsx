@@ -14,11 +14,6 @@ type Tab = 'add-expense' | 'add-income' | 'history' | 'summary';
 type HistoryFilter = 'all' | 'expense' | 'income';
 type SummaryView = 'combined' | 'separate';
 
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
-
 export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
@@ -37,7 +32,7 @@ export default function Home() {
   const [currentMonthIncome, setCurrentMonthIncome] = useState(0);
   
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
 
   const getDeploymentId = () => {
     return localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID') || '';
@@ -170,24 +165,6 @@ export default function Home() {
     initNotifications();
   }, []);
 
-  useEffect(() => {
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setInstallPrompt(e as BeforeInstallPromptEvent);
-    };
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-  }, []);
-
-  const handleInstall = async () => {
-    if (!installPrompt) return;
-    installPrompt.prompt();
-    const { outcome } = await installPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setInstallPrompt(null);
-    }
-  };
-
   const handleAddExpense = (expense: Expense) => {
     setExpenses((prev) => [expense, ...prev]);
     fetchMonthlyTotal();
@@ -318,7 +295,36 @@ export default function Home() {
           </div>
 
           <div style={{ width: '100%' }}>
-            <div className="stats-header">Monthly Summary</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <div className="stats-header" style={{ marginBottom: 0 }}>Monthly Summary</div>
+              <button
+                onClick={() => setShowSummary(!showSummary)}
+                style={{
+                  background: 'none',
+                  border: '2px solid var(--border)',
+                  borderRadius: '4px',
+                  padding: '4px',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                title={showSummary ? 'Hide values' : 'Show values'}
+              >
+                {showSummary ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
             <div className="stats-container">
               <div className="stat-item">
                 <div className="stat-label">
@@ -326,11 +332,13 @@ export default function Home() {
                   <span className="stat-label-short">Income</span>
                 </div>
                 <div className="stat-value" style={{ color: '#22c55e' }}>
-                  {new Intl.NumberFormat('id-ID', {
-                    style: 'currency',
-                    currency: 'IDR',
-                    minimumFractionDigits: 0,
-                  }).format(currentMonthIncome)}
+                  {showSummary
+                    ? new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0,
+                      }).format(currentMonthIncome)
+                    : 'Rp ••••••••'}
                 </div>
               </div>
               <div className="stat-item">
@@ -339,11 +347,13 @@ export default function Home() {
                   <span className="stat-label-short">Spending</span>
                 </div>
                 <div className="stat-value" style={{ color: currentMonthTotal > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
-                  {new Intl.NumberFormat('id-ID', {
-                    style: 'currency',
-                    currency: 'IDR',
-                    minimumFractionDigits: 0,
-                  }).format(currentMonthTotal)}
+                  {showSummary
+                    ? new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0,
+                      }).format(currentMonthTotal)
+                    : 'Rp ••••••••'}
                 </div>
               </div>
               <div className="stat-item">
@@ -352,11 +362,13 @@ export default function Home() {
                   <span className="stat-label-short">Net</span>
                 </div>
                 <div className="stat-value" style={{ color: netBalance >= 0 ? '#22c55e' : 'var(--danger)' }}>
-                  {new Intl.NumberFormat('id-ID', {
-                    style: 'currency',
-                    currency: 'IDR',
-                    minimumFractionDigits: 0,
-                  }).format(netBalance)}
+                  {showSummary
+                    ? new Intl.NumberFormat('id-ID', {
+                        style: 'currency',
+                        currency: 'IDR',
+                        minimumFractionDigits: 0,
+                      }).format(netBalance)
+                    : 'Rp ••••••••'}
                 </div>
               </div>
             </div>
@@ -669,26 +681,6 @@ style={{
               </button>
             </div>
           </div>
-
-          {installPrompt && (
-            <button
-              onClick={handleInstall}
-              style={{
-                background: 'var(--accent)',
-                border: 'none',
-                boxShadow: 'var(--brutal-shadow)',
-                borderRadius: '6px',
-                padding: '8px 20px',
-                cursor: 'pointer',
-                color: '#000',
-                fontSize: 'var(--font-xs)',
-                fontFamily: "'DM Mono', monospace",
-                fontWeight: 500,
-              }}
-            >
-              📥 Install App
-            </button>
-          )}
         </footer>
       </div>
     </div>
