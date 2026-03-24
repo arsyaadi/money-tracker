@@ -216,24 +216,36 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
               gap: '12px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: '1.75rem', flexShrink: 0 }}>{asset.icon}</span>
-              <div style={{ minWidth: 0 }}>
-                <div
-                  style={{
-                    fontWeight: 600,
-                    fontSize: 'var(--font-body)',
-                    color: 'var(--text-primary)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  fontSize: 'var(--font-xs)',
+                  fontFamily: "'DM Mono', monospace",
+                  fontWeight: 500,
+                  letterSpacing: '0.02em',
+                  color: '#3b82f6',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  whiteSpace: 'nowrap',
+                  width: 'fit-content',
+                }}
+              >
+                <span style={{ fontSize: '13px' }}>{asset.icon}</span>
+                <span style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '150px',
+                }}>
                   {asset.name}
-                </div>
-                <div style={{ fontSize: 'var(--font-xxs)', color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>
-                  Updated: {formatDate(asset.updatedAt)}
-                </div>
+                </span>
+              </span>
+              <div style={{ fontSize: 'var(--font-xxs)', color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>
+                Updated: {formatDate(asset.updatedAt)}
               </div>
             </div>
 
@@ -255,15 +267,15 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
                   background: 'var(--bg-elevated)',
                   border: '2px solid var(--border)',
                   borderRadius: '4px',
-                  padding: '6px 10px',
+                  padding: '6px 8px',
                   cursor: 'pointer',
                   color: 'var(--text-secondary)',
-                  fontSize: 'var(--font-xs)',
-                  fontFamily: "'DM Mono', monospace",
+                  fontSize: '14px',
+                  lineHeight: 1,
                 }}
                 title="Edit asset"
               >
-                Edit
+                ✏️
               </button>
 
               <button
@@ -272,15 +284,15 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
                   background: 'var(--danger-dim)',
                   border: '2px solid var(--danger)',
                   borderRadius: '4px',
-                  padding: '6px 10px',
+                  padding: '6px 8px',
                   cursor: 'pointer',
                   color: 'var(--danger)',
-                  fontSize: 'var(--font-xs)',
-                  fontFamily: "'DM Mono', monospace",
+                  fontSize: '14px',
+                  lineHeight: 1,
                 }}
                 title="Delete asset"
               >
-                Delete
+                🗑️
               </button>
             </div>
           </div>

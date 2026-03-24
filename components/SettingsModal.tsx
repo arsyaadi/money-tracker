@@ -16,9 +16,10 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDeploymentIdSave?: () => void;
+  onRefresh?: () => void;
 }
 
-export function SettingsModal({ isOpen, onClose, onDeploymentIdSave }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, onDeploymentIdSave, onRefresh }: SettingsModalProps) {
   const [deploymentId, setDeploymentId] = useState(() => {
     if (typeof window === 'undefined') return '';
     return localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID') || '';
@@ -108,6 +109,33 @@ export function SettingsModal({ isOpen, onClose, onDeploymentIdSave }: SettingsM
         >
           ⚙️ Settings
         </h2>
+
+        {onRefresh && (
+          <button
+            onClick={() => {
+              onRefresh();
+              onClose();
+            }}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              marginBottom: '16px',
+              background: 'var(--bg)',
+              border: '3px solid var(--border)',
+              borderRadius: '4px',
+              boxShadow: 'var(--brutal-shadow)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 'var(--font-body)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            ↻ Refresh Data
+          </button>
+        )}
 
         <div
           style={{

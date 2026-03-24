@@ -37,6 +37,7 @@ export default function Home() {
   
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const getDeploymentId = () => {
     return localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID') || '';
@@ -185,6 +186,13 @@ export default function Home() {
     initNotifications();
   }, []);
 
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 480);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const handleAddExpense = (expense: Expense) => {
     setExpenses((prev) => [expense, ...prev]);
     fetchMonthlyTotal();
@@ -225,6 +233,16 @@ export default function Home() {
 
   const handleCancelEditAsset = () => {
     setEditingAsset(null);
+  };
+
+  const handleRefreshAll = () => {
+    fetchExpenses();
+    fetchIncomes();
+    fetchAssets();
+    fetchMonthlyTotal();
+    fetchMonthlyIncome();
+    fetchCategories();
+    fetchIncomeCategories();
   };
 
   const netBalance = currentMonthIncome - currentMonthTotal;
@@ -278,6 +296,7 @@ export default function Home() {
       <SettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
+        onRefresh={handleRefreshAll}
         onDeploymentIdSave={() => {
           fetchExpenses();
           fetchIncomes();
@@ -294,7 +313,7 @@ export default function Home() {
           zIndex: 1,
           maxWidth: '1100px',
           margin: '0 auto',
-          padding: '16px 16px 64px',
+          padding: isMobile ? '16px 16px 80px' : '16px 16px 64px',
         }}
       >
         <header
@@ -454,42 +473,44 @@ export default function Home() {
           </div>
         )}
 
-        <div
-          className="tabs-container"
-          style={{
-            marginBottom: '24px',
-            width: '90%',
-            maxWidth: '400px',
-            margin: '0 auto 24px',
-          }}
-        >
-          {(
-            [
-              { id: 'add-expense', label: 'Add Expense' },
-              { id: 'add-income', label: 'Add Income' },
-              { id: 'assets', label: 'Assets' },
-              { id: 'history', label: 'History' },
-              { id: 'summary', label: 'Summary' },
-            ] as { id: Tab; label: string }[]
-          ).map(({ id, label }) => (
-            <button
-              key={id}
-              onClick={() => setTab(id)}
+        {!isMobile && (
+          <div
+            className="tabs-container"
+            style={{
+              marginBottom: '24px',
+              width: '90%',
+              maxWidth: '400px',
+              margin: '0 auto 24px',
+            }}
+          >
+            {(
+              [
+                { id: 'add-expense', label: 'Add Expense' },
+                { id: 'add-income', label: 'Add Income' },
+                { id: 'assets', label: 'Assets' },
+                { id: 'history', label: 'History' },
+                { id: 'summary', label: 'Summary' },
+              ] as { id: Tab; label: string }[]
+            ).map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
 style={{
-                padding: '8px 12px', flex: '1 1 auto',
-                borderRadius: '4px',
-                border: 'none',
-                background: tab === id ? (id === 'add-income' ? '#22c55e' : id === 'assets' ? '#3b82f6' : 'var(--accent)') : 'transparent',
-                color: tab === id ? (id === 'add-income' || id === 'assets' ? '#fff' : '#0d0d0f') : 'var(--text-secondary)',
-                fontWeight: tab === id ? 600 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+                  padding: '8px 12px', flex: '1 1 auto',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: tab === id ? (id === 'add-income' ? '#22c55e' : id === 'assets' ? '#3b82f6' : 'var(--accent)') : 'transparent',
+                  color: tab === id ? (id === 'add-income' || id === 'assets' ? '#fff' : '#0d0d0f') : 'var(--text-secondary)',
+                  fontWeight: tab === id ? 600 : 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {(tab === 'history' || tab === 'summary') && (
           <div style={{
@@ -665,89 +686,133 @@ style={{
           </div>
         )}
 
-        <footer
-          style={{
-            marginTop: '48px',
-            paddingTop: '24px',
-            borderTop: '3px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexDirection: 'column',
-            gap: '16px',
-          }}
-        >
-          <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span
+        {!isMobile && (
+          <footer
+            style={{
+              marginTop: '48px',
+              paddingTop: '24px',
+              borderTop: '3px solid var(--border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+          >
+            <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span
+                style={{
+                  fontSize: 'var(--font-xxs)',
+                  fontFamily: "'DM Mono', monospace",
+                  color: 'var(--text-muted)',
+                }}
+              >
+                Built for you 💖
+              </span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => setShowSettingsModal(true)}
+                  style={{
+                    background: 'none',
+                    border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
+                    borderRadius: '6px',
+                    padding: '5px 12px',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    fontSize: 'var(--font-xxs)',
+                    fontFamily: "'DM Mono', monospace",
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+                  }}
+                >
+                  ⚙️ Settings
+                </button>
+                <button
+onClick={() => {
+                    fetchExpenses();
+                    fetchIncomes();
+                    fetchAssets();
+                    fetchMonthlyTotal();
+                    fetchMonthlyIncome();
+                    fetchCategories();
+                    fetchIncomeCategories();
+                  }}
+                  style={{
+                    background: 'none',
+                    border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
+                    borderRadius: '6px',
+                    padding: '5px 12px',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    fontSize: 'var(--font-xxs)',
+                    fontFamily: "'DM Mono', monospace",
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
+                  }}
+                >
+                  ↻ Refresh
+                </button>
+              </div>
+            </div>
+          </footer>
+        )}
+      </div>
+
+      {isMobile && (
+        <nav className="mobile-bottom-nav">
+          {(
+            [
+              { id: 'add-expense', label: 'Expense', icon: '➖' },
+              { id: 'add-income', label: 'Income', icon: '➕' },
+              { id: 'assets', label: 'Assets', icon: '💰' },
+              { id: 'history', label: 'History', icon: '📋' },
+              { id: 'summary', label: 'Summary', icon: '📊' },
+            ] as { id: Tab; label: string; icon: string }[]
+          ).map(({ id, label, icon }) => (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`mobile-nav-item ${tab === id ? 'active' : ''}`}
               style={{
-                fontSize: 'var(--font-xxs)',
-                fontFamily: "'DM Mono', monospace",
-                color: 'var(--text-muted)',
+                background: 'transparent',
+                border: 'none',
+                color: tab === id
+                  ? (id === 'add-income' ? '#22c55e' : id === 'assets' ? '#3b82f6' : 'var(--accent)')
+                  : 'var(--text-muted)',
               }}
             >
-              Built for you 💖
-            </span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => setShowSettingsModal(true)}
-                style={{
-                  background: 'none',
-                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                  borderRadius: '6px',
-                  padding: '5px 12px',
-                  cursor: 'pointer',
-                  color: 'var(--text-muted)',
-                  fontSize: 'var(--font-xxs)',
-                  fontFamily: "'DM Mono', monospace",
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)';
-                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
-                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-                }}
-              >
-                ⚙️ Settings
-              </button>
-              <button
-onClick={() => {
-                  fetchExpenses();
-                  fetchIncomes();
-                  fetchAssets();
-                  fetchMonthlyTotal();
-                  fetchMonthlyIncome();
-                  fetchCategories();
-                  fetchIncomeCategories();
-                }}
-                style={{
-                  background: 'none',
-                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                  borderRadius: '6px',
-                  padding: '5px 12px',
-                  cursor: 'pointer',
-                  color: 'var(--text-muted)',
-                  fontSize: 'var(--font-xxs)',
-                  fontFamily: "'DM Mono', monospace",
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)';
-                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
-                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-                }}
-              >
-                ↻ Refresh
-              </button>
-            </div>
-          </div>
-        </footer>
-      </div>
+              <span className="nav-icon">{icon}</span>
+              <span className="nav-label">{label}</span>
+            </button>
+          ))}
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="mobile-nav-item"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+            }}
+          >
+            <span className="nav-icon">⚙️</span>
+            <span className="nav-label">Settings</span>
+          </button>
+        </nav>
+      )}
     </div>
   );
 }
