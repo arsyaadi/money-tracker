@@ -41,6 +41,15 @@ export const INCOME_CATEGORIES: Category[] = [
   'Other',
 ];
 
+export interface Asset {
+  id: string;
+  name: string;
+  amount: number;
+  icon: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface NotificationSettings {
   enabled: boolean;
   reminderTime: string;

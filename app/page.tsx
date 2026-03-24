@@ -1,24 +1,28 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Expense, Income, CategoryData, CATEGORIES as DEFAULT_CATEGORIES, INCOME_CATEGORIES as DEFAULT_INCOME_CATEGORIES } from '@/lib/types';
+import { Expense, Income, CategoryData, Asset, CATEGORIES as DEFAULT_CATEGORIES, INCOME_CATEGORIES as DEFAULT_INCOME_CATEGORIES } from '@/lib/types';
 import { AddExpenseForm } from '@/components/AddExpenseForm';
 import { AddIncomeForm } from '@/components/AddIncomeForm';
 import { ExpenseList } from '@/components/ExpenseList';
 import { IncomeList } from '@/components/IncomeList';
 import { SummaryDashboard } from '@/components/SummaryDashboard';
 import { SettingsModal } from '@/components/SettingsModal';
+import { AddAssetForm } from '@/components/AddAssetForm';
+import { AssetList } from '@/components/AssetList';
 import { initNotifications } from '@/lib/notifications';
 
-type Tab = 'add-expense' | 'add-income' | 'history' | 'summary';
+type Tab = 'add-expense' | 'add-income' | 'assets' | 'history' | 'summary';
 type HistoryFilter = 'all' | 'expense' | 'income';
 type SummaryView = 'combined' | 'separate';
 
 export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [categories, setCategories] = useState<CategoryData[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<CategoryData[]>([]);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -152,14 +156,30 @@ export default function Home() {
     }
   }, [filterMonth]);
 
+  const fetchAssets = useCallback(async () => {
+    const deploymentId = getDeploymentId();
+    if (!deploymentId) return;
+    try {
+      const res = await fetch('/api/assets', {
+        headers: { 'x-deployment-id': deploymentId }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to load assets');
+      setAssets(data.assets);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchExpenses();
     fetchIncomes();
+    fetchAssets();
     fetchMonthlyTotal();
     fetchMonthlyIncome();
     fetchCategories();
     fetchIncomeCategories();
-  }, [fetchExpenses, fetchIncomes, fetchMonthlyTotal, fetchMonthlyIncome, fetchCategories, fetchIncomeCategories]);
+  }, [fetchExpenses, fetchIncomes, fetchAssets, fetchMonthlyTotal, fetchMonthlyIncome, fetchCategories, fetchIncomeCategories]);
 
   useEffect(() => {
     initNotifications();
@@ -183,6 +203,28 @@ export default function Home() {
   const handleDeleteIncome = (id: string) => {
     setIncomes((prev) => prev.filter((i) => i.id !== id));
     fetchMonthlyIncome();
+  };
+
+  const handleAddAsset = (asset: Asset) => {
+    setAssets((prev) => [asset, ...prev]);
+    setEditingAsset(null);
+  };
+
+  const handleUpdateAsset = (asset: Asset) => {
+    setAssets((prev) => prev.map((a) => (a.id === asset.id ? asset : a)));
+    setEditingAsset(null);
+  };
+
+  const handleDeleteAsset = (id: string) => {
+    setAssets((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleEditAsset = (asset: Asset) => {
+    setEditingAsset(asset);
+  };
+
+  const handleCancelEditAsset = () => {
+    setEditingAsset(null);
   };
 
   const netBalance = currentMonthIncome - currentMonthTotal;
@@ -425,6 +467,7 @@ export default function Home() {
             [
               { id: 'add-expense', label: 'Add Expense' },
               { id: 'add-income', label: 'Add Income' },
+              { id: 'assets', label: 'Assets' },
               { id: 'history', label: 'History' },
               { id: 'summary', label: 'Summary' },
             ] as { id: Tab; label: string }[]
@@ -436,8 +479,8 @@ style={{
                 padding: '8px 12px', flex: '1 1 auto',
                 borderRadius: '4px',
                 border: 'none',
-                background: tab === id ? (id === 'add-income' ? '#22c55e' : 'var(--accent)') : 'transparent',
-                color: tab === id ? (id === 'add-income' ? '#fff' : '#0d0d0f') : 'var(--text-secondary)',
+                background: tab === id ? (id === 'add-income' ? '#22c55e' : id === 'assets' ? '#3b82f6' : 'var(--accent)') : 'transparent',
+                color: tab === id ? (id === 'add-income' || id === 'assets' ? '#fff' : '#0d0d0f') : 'var(--text-secondary)',
                 fontWeight: tab === id ? 600 : 500,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
@@ -557,6 +600,27 @@ style={{
           <AddExpenseForm categories={categories} onAdd={handleAddExpense} onRefreshCategories={fetchCategories} />
         ) : tab === 'add-income' ? (
           <AddIncomeForm categories={incomeCategories} onAdd={handleAddIncome} onRefreshCategories={fetchIncomeCategories} />
+        ) : tab === 'assets' ? (
+          <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+            <AddAssetForm 
+              onAdd={handleAddAsset} 
+              editingAsset={editingAsset}
+              onUpdate={handleUpdateAsset}
+              onCancelEdit={handleCancelEditAsset}
+            />
+            {assets.length > 0 && (
+              <div style={{ marginTop: '24px' }}>
+                <h3 style={{ marginBottom: '12px', fontSize: 'var(--font-value)', color: '#3b82f6', fontFamily: "'DM Mono', monospace" }}>
+                  Your Assets
+                </h3>
+                <AssetList 
+                  assets={assets} 
+                  onDelete={handleDeleteAsset}
+                  onEdit={handleEditAsset}
+                />
+              </div>
+            )}
+          </div>
         ) : (
           <div
             style={{
@@ -649,9 +713,10 @@ style={{
                 ⚙️ Settings
               </button>
               <button
-                onClick={() => {
+onClick={() => {
                   fetchExpenses();
                   fetchIncomes();
+                  fetchAssets();
                   fetchMonthlyTotal();
                   fetchMonthlyIncome();
                   fetchCategories();

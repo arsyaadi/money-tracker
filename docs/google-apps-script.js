@@ -4,6 +4,7 @@ const SHEET_NAME = "expenses";
 const CATEGORIES_SHEET_NAME = "categories";
 const INCOME_SHEET_NAME = "income";
 const INCOME_CATEGORIES_SHEET_NAME = "income_categories";
+const ASSETS_SHEET_NAME = "assets";
 
 // ===== ENTRY POINTS =====
 function doPost(e) {
@@ -22,6 +23,10 @@ function doPost(e) {
     if (action === "deleteIncome") return deleteIncome(body);
     if (action === "addIncomeCategory") return addIncomeCategory(body);
     if (action === "deleteIncomeCategory") return deleteIncomeCategory(body);
+
+    if (action === "addAsset") return addAsset(body);
+    if (action === "updateAsset") return updateAsset(body);
+    if (action === "deleteAsset") return deleteAsset(body);
 
     return json({ error: "Invalid action" });
   } catch (err) {
@@ -56,6 +61,9 @@ function doGet(e) {
     if (action === "getIncomeCategoryTotals") return getIncomeCategoryTotals(e.parameter.month);
     if (action === "getIncomeCategories") return getIncomeCategories();
 
+    if (action === "getAssets") return getAssets();
+    if (action === "getAssetsTotal") return getAssetsTotal();
+
     return json({ error: "Invalid action" });
   } catch (err) {
     return json({ error: err.toString() });
@@ -70,7 +78,8 @@ function ensureSheetsExist() {
     { name: SHEET_NAME, headers: ["id", "title", "amount", "category", "createdAt"] },
     { name: CATEGORIES_SHEET_NAME, headers: ["id", "name", "icon", "color"] },
     { name: INCOME_SHEET_NAME, headers: ["id", "title", "amount", "category", "createdAt"] },
-    { name: INCOME_CATEGORIES_SHEET_NAME, headers: ["id", "name", "icon", "color"] }
+    { name: INCOME_CATEGORIES_SHEET_NAME, headers: ["id", "name", "icon", "color"] },
+    { name: ASSETS_SHEET_NAME, headers: ["id", "name", "amount", "icon", "createdAt", "updatedAt"] }
   ];
   
   sheetsConfig.forEach(config => {
@@ -443,6 +452,106 @@ function getIncomeCategoryTotals(month) {
   }
 
   return json({ categories: Object.keys(map).map(cat => ({ category: cat, total: map[cat] })) });
+}
+
+// ===== ASSET ACTIONS =====
+function getAssets() {
+  const sheet = getSheet(ASSETS_SHEET_NAME);
+  if (!sheet) return json({ assets: [] });
+  
+  const values = sheet.getDataRange().getValues();
+  const assets = [];
+
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][0] && values[i][0] !== "id") {
+      assets.push({
+        id: values[i][0],
+        name: values[i][1],
+        amount: Number(values[i][2]),
+        icon: values[i][3],
+        createdAt: values[i][4],
+        updatedAt: values[i][5]
+      });
+    }
+  }
+
+  return json({ assets });
+}
+
+function addAsset(body) {
+  const sheet = getSheet(ASSETS_SHEET_NAME);
+  const asset = body.asset || body;
+  if (!asset) return json({ error: "Missing asset data" });
+
+  const id = Utilities.getUuid();
+  const now = new Date().toISOString();
+  const name = asset.name || "";
+  const amount = Number(asset.amount || 0);
+  const icon = asset.icon || "💰";
+
+  sheet.appendRow([id, name, amount, icon, now, now]);
+  return json({ asset: { id, name, amount, icon, createdAt: now, updatedAt: now } });
+}
+
+function updateAsset(body) {
+  const sheet = getSheet(ASSETS_SHEET_NAME);
+  const asset = body.asset || body;
+  if (!asset || !asset.id) return json({ error: "Missing asset id" });
+
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][0] === asset.id) {
+      const now = new Date().toISOString();
+      const createdAt = values[i][4];
+      sheet.getRange(i + 1, 2, 1, 5).setValues([[
+        asset.name,
+        Number(asset.amount),
+        asset.icon || "💰",
+        createdAt,
+        now
+      ]]);
+      return json({ 
+        asset: { 
+          id: asset.id, 
+          name: asset.name, 
+          amount: Number(asset.amount), 
+          icon: asset.icon || "💰",
+          createdAt: createdAt,
+          updatedAt: now 
+        } 
+      });
+    }
+  }
+  return json({ error: "Asset not found" });
+}
+
+function deleteAsset(body) {
+  const sheet = getSheet(ASSETS_SHEET_NAME);
+  const id = body.id;
+  if (!id) return json({ error: "Missing id" });
+
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (values[i][0] === id) {
+      sheet.deleteRow(i + 1);
+      break;
+    }
+  }
+  return json({ success: true });
+}
+
+function getAssetsTotal() {
+  const sheet = getSheet(ASSETS_SHEET_NAME);
+  if (!sheet) return json({ total: 0 });
+  
+  const values = sheet.getDataRange().getValues();
+  let total = 0;
+
+  for (let i = 1; i < values.length; i++) {
+    total += Number(values[i][2]);
+  }
+
+  return json({ total });
 }
 
 // ===== RESPONSE =====

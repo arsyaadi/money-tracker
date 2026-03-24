@@ -1,8 +1,8 @@
 import { headers } from 'next/headers';
-import type { Category, Expense, Income, CategoryData } from './types';
+import type { Category, Expense, Income, CategoryData, Asset } from './types';
 
 export { CATEGORIES, INCOME_CATEGORIES } from './types';
-export type { Category, Expense, Income, CategoryData } from './types';
+export type { Category, Expense, Income, CategoryData, Asset } from './types';
 
 async function getAppsScriptUrl(): Promise<string> {
   const headersList = await headers();
@@ -208,5 +208,68 @@ export async function getMonthlyIncomeTotal(month: string) {
 
 export async function getIncomeCategoryTotals(month?: string) {
   const data = await appsScriptFetch<any>({ action: 'getIncomeCategoryTotals', ...(month && { month }) });
+  return data;
+}
+
+// ===== ASSET FUNCTIONS =====
+
+export async function getAssets(): Promise<Asset[]> {
+  const { assets } = await appsScriptFetch<{ assets: any[] }>({
+    action: 'getAssets',
+  });
+  
+  return assets.map(a => ({
+    id: a.id,
+    name: a.name,
+    amount: Number(a.amount),
+    icon: a.icon,
+    createdAt: a.createdAt,
+    updatedAt: a.updatedAt,
+  }));
+}
+
+export async function addAsset(
+  asset: Omit<Asset, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<Asset> {
+  const { asset: created } = await appsScriptFetch<{ asset: any }>(
+    null,
+    { action: 'addAsset', asset }
+  );
+  return {
+    id: created.id,
+    name: created.name,
+    amount: Number(created.amount),
+    icon: created.icon,
+    createdAt: created.createdAt,
+    updatedAt: created.updatedAt,
+  };
+}
+
+export async function updateAsset(
+  asset: Pick<Asset, 'id' | 'name' | 'amount' | 'icon'>
+): Promise<Asset> {
+  const { asset: updated } = await appsScriptFetch<{ asset: any }>(
+    null,
+    { action: 'updateAsset', asset }
+  );
+  return {
+    id: updated.id,
+    name: updated.name,
+    amount: Number(updated.amount),
+    icon: updated.icon,
+    createdAt: updated.createdAt,
+    updatedAt: updated.updatedAt,
+  };
+}
+
+export async function deleteAsset(id: string): Promise<void> {
+  await appsScriptFetch<{ success: boolean }>(null, {
+    action: 'deleteAsset',
+    id,
+  });
+}
+
+export async function getAssetsTotal() {
+  const data = await appsScriptFetch<any>({ action: 'getAssetsTotal' });
   return data;
 }
