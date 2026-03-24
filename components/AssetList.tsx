@@ -208,71 +208,65 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
           <div
             key={asset.id}
             style={{
-              padding: '16px 20px',
+              padding: '14px 16px',
               borderBottom: '3px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: '12px',
+              transition: 'background 0.1s ease',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-elevated)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLDivElement).style.background = 'transparent';
             }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
-                  borderRadius: '20px',
-                  fontSize: 'var(--font-xs)',
-                  fontFamily: "'DM Mono', monospace",
-                  fontWeight: 500,
-                  letterSpacing: '0.02em',
-                  color: '#3b82f6',
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  whiteSpace: 'nowrap',
-                  width: 'fit-content',
-                }}
-              >
-                <span style={{ fontSize: '13px' }}>{asset.icon}</span>
-                <span style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  maxWidth: '150px',
-                }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: 'var(--font-body)', minWidth: 0 }}>
+                <span style={{ fontSize: 'var(--font-icon-sm)' }}>{asset.icon}</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                   {asset.name}
                 </span>
-              </span>
+              </div>
               <div style={{ fontSize: 'var(--font-xxs)', color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>
-                Updated: {formatDate(asset.updatedAt)}
+                {formatDate(asset.updatedAt)}
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span
                 style={{
                   fontFamily: "'DM Mono', monospace",
-                  fontSize: 'var(--font-value)',
+                  fontSize: 'var(--font-body)',
                   color: '#3b82f6',
                   fontWeight: 600,
+                  letterSpacing: '-0.02em',
                 }}
               >
                 {showTotal ? formatCurrency(asset.amount) : 'Rp ••••••••'}
-              </div>
+              </span>
 
               <button
                 onClick={() => onEdit(asset)}
                 style={{
-                  background: 'var(--bg-elevated)',
-                  border: '2px solid var(--border)',
-                  borderRadius: '4px',
-                  padding: '6px 8px',
+                  background: 'none',
+                  border: 'none',
                   cursor: 'pointer',
-                  color: 'var(--text-secondary)',
-                  fontSize: '14px',
+                  color: 'var(--text-muted)',
+                  fontSize: 'var(--font-body)',
+                  padding: '4px',
                   lineHeight: 1,
+                  transition: 'color 0.15s ease',
+                  flexShrink: 0,
                 }}
+                onMouseEnter={(e) =>
+                  ((e.currentTarget as HTMLButtonElement).style.color = '#3b82f6')
+                }
+                onMouseLeave={(e) =>
+                  ((e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)')
+                }
                 title="Edit asset"
               >
                 ✏️
@@ -281,18 +275,25 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
               <button
                 onClick={() => handleDeleteClick(asset)}
                 style={{
-                  background: 'var(--danger-dim)',
-                  border: '2px solid var(--danger)',
-                  borderRadius: '4px',
-                  padding: '6px 8px',
+                  background: 'none',
+                  border: 'none',
                   cursor: 'pointer',
-                  color: 'var(--danger)',
-                  fontSize: '14px',
+                  color: 'var(--text-muted)',
+                  fontSize: 'var(--font-body)',
+                  padding: '4px',
                   lineHeight: 1,
+                  transition: 'color 0.15s ease',
+                  flexShrink: 0,
                 }}
+                onMouseEnter={(e) =>
+                  ((e.currentTarget as HTMLButtonElement).style.color = 'var(--danger)')
+                }
+                onMouseLeave={(e) =>
+                  ((e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)')
+                }
                 title="Delete asset"
               >
-                🗑️
+                ×
               </button>
             </div>
           </div>
