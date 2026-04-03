@@ -97,6 +97,51 @@ function getSheet(sheetName) {
   return ss.getSheetByName(sheetName);
 }
 
+function getScriptTimeZone() {
+  return Session.getScriptTimeZone() || "Asia/Jakarta";
+}
+
+function toYmd(value) {
+  if (!value) return "";
+
+  const tz = getScriptTimeZone();
+
+  if (value instanceof Date) {
+    return Utilities.formatDate(value, tz, "yyyy-MM-dd");
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+
+    const directMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (directMatch) return directMatch[1];
+
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) {
+      return Utilities.formatDate(parsed, tz, "yyyy-MM-dd");
+    }
+
+    return "";
+  }
+
+  const parsed = new Date(value);
+  if (!isNaN(parsed.getTime())) {
+    return Utilities.formatDate(parsed, tz, "yyyy-MM-dd");
+  }
+
+  return "";
+}
+
+function toYm(value) {
+  const ymd = toYmd(value);
+  return ymd ? ymd.slice(0, 7) : "";
+}
+
+function todayYmd() {
+  return Utilities.formatDate(new Date(), getScriptTimeZone(), "yyyy-MM-dd");
+}
+
 // ===== EXPENSE CATEGORY ACTIONS =====
 function getCategories() {
   const sheet = getSheet(CATEGORIES_SHEET_NAME);
@@ -172,7 +217,7 @@ function addExpense(body) {
   if (!expense) return json({ error: "Missing expense data" });
 
   const id = Utilities.getUuid();
-  const createdAt = expense.date || new Date().toISOString();
+  const createdAt = toYmd(expense.date) || todayYmd();
   const title = expense.title || expense.Title || expense.name || expense.description || "";
   const amount = Number(expense.amount || expense.Amount || 0);
   const category = expense.category || expense.Category || "";
@@ -189,9 +234,8 @@ function getExpenses(month, category) {
   const expenses = [];
 
   for (let i = 1; i < values.length; i++) {
-    const createdAt = values[i][4];
-    const date = new Date(createdAt);
-    const rowMonth = date.toISOString().slice(0, 7);
+    const createdAt = toYmd(values[i][4]);
+    const rowMonth = createdAt ? createdAt.slice(0, 7) : "";
 
     if (month && rowMonth !== month) continue;
     if (category && values[i][3] !== category) continue;
@@ -233,9 +277,7 @@ function getMonthlyTotal(month) {
   let total = 0;
 
   for (let i = 1; i < values.length; i++) {
-    const createdAt = values[i][4];
-    const date = new Date(createdAt);
-    if (date.toISOString().slice(0, 7) === month) {
+    if (toYm(values[i][4]) === month) {
       total += Number(values[i][2]);
     }
   }
@@ -251,9 +293,7 @@ function getCategoryTotals(month) {
   const map = {};
 
   for (let i = 1; i < values.length; i++) {
-    const createdAt = values[i][4];
-    const date = new Date(createdAt);
-    if (month && date.toISOString().slice(0, 7) !== month) continue;
+    if (month && toYm(values[i][4]) !== month) continue;
 
     const category = values[i][3] || "Uncategorized";
     const amount = Number(values[i][2]);
@@ -273,9 +313,7 @@ function getMonthlySummary(month) {
   const map = {};
 
   for (let i = 1; i < values.length; i++) {
-    const createdAt = values[i][4];
-    const date = new Date(createdAt);
-    if (date.toISOString().slice(0, 7) !== month) continue;
+    if (toYm(values[i][4]) !== month) continue;
 
     const amount = Number(values[i][2]);
     const category = values[i][3] || "Uncategorized";
@@ -363,7 +401,7 @@ function addIncome(body) {
   if (!income) return json({ error: "Missing income data" });
 
   const id = Utilities.getUuid();
-  const createdAt = income.date || new Date().toISOString();
+  const createdAt = toYmd(income.date) || todayYmd();
   const title = income.title || income.Title || income.name || income.description || "";
   const amount = Number(income.amount || income.Amount || 0);
   const category = income.category || income.Category || "";
@@ -380,9 +418,8 @@ function getIncomes(month, category) {
   const incomes = [];
 
   for (let i = 1; i < values.length; i++) {
-    const createdAt = values[i][4];
-    const date = new Date(createdAt);
-    const rowMonth = date.toISOString().slice(0, 7);
+    const createdAt = toYmd(values[i][4]);
+    const rowMonth = createdAt ? createdAt.slice(0, 7) : "";
 
     if (month && rowMonth !== month) continue;
     if (category && values[i][3] !== category) continue;
@@ -424,9 +461,7 @@ function getMonthlyIncomeTotal(month) {
   let total = 0;
 
   for (let i = 1; i < values.length; i++) {
-    const createdAt = values[i][4];
-    const date = new Date(createdAt);
-    if (date.toISOString().slice(0, 7) === month) {
+    if (toYm(values[i][4]) === month) {
       total += Number(values[i][2]);
     }
   }
@@ -442,9 +477,7 @@ function getIncomeCategoryTotals(month) {
   const map = {};
 
   for (let i = 1; i < values.length; i++) {
-    const createdAt = values[i][4];
-    const date = new Date(createdAt);
-    if (month && date.toISOString().slice(0, 7) !== month) continue;
+    if (month && toYm(values[i][4]) !== month) continue;
 
     const category = values[i][3] || "Uncategorized";
     const amount = Number(values[i][2]);

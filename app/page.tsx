@@ -16,6 +16,13 @@ type Tab = 'add-expense' | 'add-income' | 'assets' | 'history' | 'summary';
 type HistoryFilter = 'all' | 'expense' | 'income';
 type SummaryView = 'combined' | 'separate';
 
+function getLocalMonthKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
 export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
@@ -28,7 +35,7 @@ export default function Home() {
   const [error, setError] = useState('');
   
   const [tab, setTab] = useState<Tab>('add-expense');
-  const [filterMonth, setFilterMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [filterMonth, setFilterMonth] = useState(() => getLocalMonthKey());
   const [filterCategory, setFilterCategory] = useState('');
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
   const [summaryView, setSummaryView] = useState<SummaryView>('combined');
@@ -79,7 +86,7 @@ export default function Home() {
     const deploymentId = getDeploymentId();
     if (!deploymentId) return;
     try {
-      const currentMonth = new Date().toISOString().slice(0, 7);
+      const currentMonth = getLocalMonthKey();
       const res = await fetch(`/api/expenses/monthly-total?month=${currentMonth}`, {
         headers: { 'x-deployment-id': deploymentId }
       });
@@ -96,7 +103,7 @@ export default function Home() {
     const deploymentId = getDeploymentId();
     if (!deploymentId) return;
     try {
-      const currentMonth = new Date().toISOString().slice(0, 7);
+      const currentMonth = getLocalMonthKey();
       const res = await fetch(`/api/incomes/monthly-total?month=${currentMonth}`, {
         headers: { 'x-deployment-id': deploymentId }
       });

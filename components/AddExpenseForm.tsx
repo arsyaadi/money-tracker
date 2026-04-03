@@ -3,6 +3,14 @@
 import { useState } from 'react';
 import { Expense, CategoryData } from '@/lib/types';
 
+function getLocalToday() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 interface AddExpenseFormProps {
   categories: CategoryData[];
   onAdd: (expense: Expense) => void;
@@ -10,7 +18,7 @@ interface AddExpenseFormProps {
 }
 
 export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddExpenseFormProps) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalToday();
 
   const [form, setForm] = useState({
     date: today,

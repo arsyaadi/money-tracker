@@ -4,6 +4,22 @@ import type { Category, Expense, Income, CategoryData, Asset } from './types';
 export { CATEGORIES, INCOME_CATEGORIES } from './types';
 export type { Category, Expense, Income, CategoryData, Asset } from './types';
 
+function normalizeDateOnly(value: unknown): string {
+  if (!value) return '';
+  if (typeof value === 'string') {
+    const directMatch = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (directMatch) return directMatch[1];
+  }
+
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) return '';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 async function getAppsScriptUrl(): Promise<string> {
   const headersList = await headers();
   let deploymentId = headersList.get('x-deployment-id') || 
@@ -102,7 +118,7 @@ export async function getExpenses(month?: string, category?: string): Promise<Ex
     title: e.title,
     amount: e.amount,
     category: e.category,
-    date: e.createdAt ? e.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+    date: normalizeDateOnly(e.createdAt)
   }));
 }
 
@@ -115,7 +131,7 @@ export async function addExpense(
   );
   return {
     ...created,
-    date: created.createdAt ? created.createdAt.split('T')[0] : expense.date
+    date: normalizeDateOnly(created.createdAt) || expense.date
   };
 }
 
@@ -177,7 +193,7 @@ export async function getIncomes(month?: string, category?: string): Promise<Inc
     title: i.title,
     amount: i.amount,
     category: i.category,
-    date: i.createdAt ? i.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+    date: normalizeDateOnly(i.createdAt)
   }));
 }
 
@@ -190,7 +206,7 @@ export async function addIncome(
   );
   return {
     ...created,
-    date: created.createdAt ? created.createdAt.split('T')[0] : income.date
+    date: normalizeDateOnly(created.createdAt) || income.date
   };
 }
 

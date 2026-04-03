@@ -3,6 +3,14 @@
 import { useState } from 'react';
 import { Income, CategoryData } from '@/lib/types';
 
+function getLocalToday() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 interface AddIncomeFormProps {
   categories: CategoryData[];
   onAdd: (income: Income) => void;
@@ -10,7 +18,7 @@ interface AddIncomeFormProps {
 }
 
 export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddIncomeFormProps) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalToday();
 
   const [form, setForm] = useState({
     date: today,
