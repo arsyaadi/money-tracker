@@ -57,12 +57,36 @@ jobs:
       - name: Initialize Tauri Android
         run: npx tauri android init
 
-      - name: Build Android APK (Signed Debug)
-        run: npx tauri android build --apk --debug
+      - name: Build Android Release APK
+        run: npx tauri android build --apk
+
+      - name: Generate Keystore and Sign APK
+        run: |
+          keytool -genkey -v -keystore release.jks -alias release -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=MoneyTracker,O=MoneyTracker,C=ID"
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
+          echo "Using build-tools from: $BUILD_TOOLS_DIR"
+          APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
+          ZIPALIGN="$BUILD_TOOLS_DIR/zipalign"
+
+          mkdir -p signed-apk
+          for apk in $(find src-tauri/gen/android/app/build/outputs/apk -name "*unsigned.apk"); do
+            filename=$(basename "$apk" -unsigned.apk)
+            aligned_apk="signed-apk/${filename}-aligned.apk"
+            final_apk="signed-apk/${filename}-signed.apk"
+
+            if [ -f "$ZIPALIGN" ]; then
+              $ZIPALIGN -v -p 4 "$apk" "$aligned_apk"
+              $APKSIGNER sign --ks release.jks --ks-pass pass:android --ks-key-alias release --key-pass pass:android --out "$final_apk" "$aligned_apk"
+              rm -f "$aligned_apk"
+            else
+              $APKSIGNER sign --ks release.jks --ks-pass pass:android --ks-key-alias release --key-pass pass:android --out "$final_apk" "$apk"
+            fi
+            echo "Successfully signed: $final_apk"
+          done
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: money-tracker-apk
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: signed-apk/*.apk
           if-no-files-found: error
