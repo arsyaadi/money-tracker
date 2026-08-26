@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Asset } from '@/lib/types';
+import { deleteAsset } from '@/lib/apiClient';
 
 interface AssetListProps {
   assets: Asset[];
@@ -25,14 +26,7 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
     setDeletingId(assetToDelete.id);
     
     try {
-      const deploymentId = localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
-      const res = await fetch(`/api/assets?id=${assetToDelete.id}`, {
-        method: 'DELETE',
-        headers: deploymentId ? { 'x-deployment-id': deploymentId } : {}
-      });
-
-      if (!res.ok) throw new Error('Failed to delete asset');
-      
+      await deleteAsset(assetToDelete.id);
       onDelete(assetToDelete.id);
     } catch (err) {
       console.error('Failed to delete asset:', err);

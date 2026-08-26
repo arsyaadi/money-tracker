@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Income, CategoryData } from '@/lib/types';
+import { deleteIncome } from '@/lib/apiClient';
 import { CategoryBadge } from './CategoryBadge';
 
 interface IncomeListProps {
@@ -33,12 +34,7 @@ export function IncomeList({ incomes, categories, onDelete }: IncomeListProps) {
     setIncomeToDelete(null);
     setDeletingId(id);
     try {
-      const deploymentId = localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
-      const res = await fetch(`/api/incomes/${id}`, {
-        method: 'DELETE',
-        headers: deploymentId ? { 'x-deployment-id': deploymentId } : {},
-      });
-      if (!res.ok) throw new Error('Failed to delete');
+      await deleteIncome(id);
       onDelete(id);
     } catch (err) {
       console.error(err);

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Income, CategoryData } from '@/lib/types';
+import { addIncome, addIncomeCategory, deleteIncomeCategory } from '@/lib/apiClient';
 
 function getLocalToday() {
   const now = new Date();
@@ -44,26 +45,12 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
     setSuccess(false);
 
     try {
-      const deploymentId = localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
-      const res = await fetch('/api/incomes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(deploymentId && { 'x-deployment-id': deploymentId })
-        },
-        body: JSON.stringify({
-          ...form,
-          amount: Number(form.amount),
-        }),
+      const created = await addIncome({
+        ...form,
+        amount: Number(form.amount),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error ?? 'Failed to add income');
-      }
-
-      onAdd(data.income);
+      onAdd(created);
       setSuccess(true);
       setForm({ date: today, amount: '', category: categories.length > 0 ? categories[0].name : 'Salary', title: '' });
       setTimeout(() => setSuccess(false), 2500);
@@ -82,17 +69,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
     setError('');
     
     try {
-      const deploymentId = localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
-      const res = await fetch('/api/income-categories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(deploymentId && { 'x-deployment-id': deploymentId })
-        },
-        body: JSON.stringify(newCat),
-      });
-
-      if (!res.ok) throw new Error('Failed to create category');
+      await addIncomeCategory(newCat);
       
       onRefreshCategories();
       setForm(prev => ({ ...prev, category: newCat.name }));
@@ -119,13 +96,7 @@ export function AddIncomeForm({ categories, onAdd, onRefreshCategories }: AddInc
     setError('');
     
     try {
-      const deploymentId = localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
-      const res = await fetch(`/api/income-categories/${id}`, {
-        method: 'DELETE',
-        headers: deploymentId ? { 'x-deployment-id': deploymentId } : {}
-      });
-
-      if (!res.ok) throw new Error('Failed to delete category');
+      await deleteIncomeCategory(id);
       
       onRefreshCategories();
       if (form.category === name) {
