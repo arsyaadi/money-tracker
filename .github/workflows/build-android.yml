@@ -2,7 +2,7 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main, feat/tauri-mobile ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
