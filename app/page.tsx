@@ -91,7 +91,7 @@ export default function Home() {
     const currentMonth = getLocalMonthKey();
     try {
       const data = await getMonthlyTotal(currentMonth);
-      if (data && data.total !== undefined) {
+      if (data && typeof data.total === 'number') {
         setCurrentMonthTotal(data.total);
       }
     } catch (err) {
@@ -105,7 +105,7 @@ export default function Home() {
     const currentMonth = getLocalMonthKey();
     try {
       const data = await getMonthlyIncomeTotal(currentMonth);
-      if (data && data.total !== undefined) {
+      if (data && typeof data.total === 'number') {
         setCurrentMonthIncome(data.total);
       }
     } catch (err) {

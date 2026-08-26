@@ -124,6 +124,11 @@ export async function deleteExpense(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete expense');
 }
 
+export interface MonthlyTotalResponse {
+  total?: number;
+  [key: string]: unknown;
+}
+
 export async function getMonthlySummary(month: string): Promise<Record<string, unknown>> {
   if (isTauri()) {
     return await invoke('get_monthly_summary', {
@@ -138,9 +143,9 @@ export async function getMonthlySummary(month: string): Promise<Record<string, u
   return await res.json();
 }
 
-export async function getMonthlyTotal(month: string): Promise<Record<string, unknown>> {
+export async function getMonthlyTotal(month: string): Promise<MonthlyTotalResponse> {
   if (isTauri()) {
-    return await invoke('get_monthly_total', {
+    return await invoke<MonthlyTotalResponse>('get_monthly_total', {
       month,
       deploymentId: getDeploymentId(),
     });
@@ -256,9 +261,9 @@ export async function deleteIncome(id: string): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete income');
 }
 
-export async function getMonthlyIncomeTotal(month: string): Promise<Record<string, unknown>> {
+export async function getMonthlyIncomeTotal(month: string): Promise<MonthlyTotalResponse> {
   if (isTauri()) {
-    return await invoke('get_monthly_income_total', {
+    return await invoke<MonthlyTotalResponse>('get_monthly_income_total', {
       month,
       deploymentId: getDeploymentId(),
     });
