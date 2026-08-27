@@ -10,7 +10,6 @@ interface ExpenseListProps {
   expenses: Expense[];
   categories: CategoryData[];
   onDelete: (id: string) => void;
-  showBalances?: boolean;
 }
 
 function formatAmount(amount: number): string {
@@ -25,7 +24,6 @@ export function ExpenseList({
   expenses,
   categories,
   onDelete,
-  showBalances = true,
 }: ExpenseListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; title: string } | null>(null);
@@ -139,7 +137,7 @@ export function ExpenseList({
                   {dayExpenses.length} {dayExpenses.length === 1 ? 'item' : 'items'}
                 </span>
                 <span className="font-mono text-xs font-bold text-rose-600 tabular-nums">
-                  {showBalances ? `- ${formatAmount(dayTotal)}` : '••••••'}
+                  - {formatAmount(dayTotal)}
                 </span>
               </div>
             </div>
@@ -164,7 +162,7 @@ export function ExpenseList({
 
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-xs sm:text-sm font-bold text-rose-600 tabular-nums">
-                      {showBalances ? `- ${formatAmount(expense.amount)}` : '••••••'}
+                      - {formatAmount(expense.amount)}
                     </span>
 
                     <button

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Sliders, X, RefreshCw, Cloud, Bell, Lock, Key, ShieldCheck, Trash2 } from 'lucide-react';
+import { Sliders, X, RefreshCw, Cloud, Bell, Lock, Key, ShieldCheck, Trash2, Plus } from 'lucide-react';
 import { NotificationSettings } from '@/lib/types';
 import {
   getSettings,
@@ -15,10 +15,10 @@ import {
 import {
   isPinConfigured,
   isPinEnabled,
-  setSecurityPin,
   setPinEnabled,
   removeSecurityPin,
 } from '@/lib/security';
+import { SetPinModal } from './SetPinModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -51,11 +51,9 @@ export function SettingsModal({
   // PIN settings state
   const [pinEnabled, setPinEnabledState] = useState<boolean>(() => isPinEnabled());
   const [hasConfiguredPin, setHasConfiguredPin] = useState<boolean>(() => isPinConfigured());
-  const [isChangingPin, setIsChangingPin] = useState(false);
-  const [newPin, setNewPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [pinError, setPinError] = useState('');
-  const [pinSuccess, setPinSuccess] = useState('');
+  const [showSetPinModal, setShowSetPinModal] = useState<boolean>(false);
+  const [isChangingPin, setIsChangingPin] = useState<boolean>(false);
+  const [pinSuccess, setPinSuccess] = useState<string>('');
 
   const handleToggleReminder = async () => {
     if (!settings.enabled) {
@@ -84,7 +82,8 @@ export function SettingsModal({
 
   const handleTogglePinProtection = () => {
     if (!hasConfiguredPin) {
-      setIsChangingPin(true);
+      setIsChangingPin(false);
+      setShowSetPinModal(true);
       return;
     }
     const nextState = !pinEnabled;
@@ -93,26 +92,10 @@ export function SettingsModal({
     onPinConfigChange?.();
   };
 
-  const handleSavePin = async () => {
-    setPinError('');
-    setPinSuccess('');
-
-    if (newPin.length < 4) {
-      setPinError('PIN must be at least 4 digits');
-      return;
-    }
-    if (newPin !== confirmPin) {
-      setPinError('PIN confirmation does not match');
-      return;
-    }
-
-    await setSecurityPin(newPin);
+  const handlePinSetSuccess = () => {
     setHasConfiguredPin(true);
     setPinEnabledState(true);
-    setIsChangingPin(false);
-    setNewPin('');
-    setConfirmPin('');
-    setPinSuccess('PIN configured and enabled!');
+    setPinSuccess(isChangingPin ? 'PIN changed successfully!' : 'PIN configured and enabled!');
     onPinConfigChange?.();
     setTimeout(() => setPinSuccess(''), 3000);
   };
@@ -122,7 +105,6 @@ export function SettingsModal({
       removeSecurityPin();
       setHasConfiguredPin(false);
       setPinEnabledState(false);
-      setIsChangingPin(false);
       onPinConfigChange?.();
     }
   };
@@ -207,7 +189,7 @@ export function SettingsModal({
                 <span>Stealth PIN Protection</span>
               </div>
               <p className="text-[11px] text-zinc-500 mt-0.5">
-                Require PIN to reveal hidden financial figures
+                Require 4-digit PIN to reveal total balance figures
               </p>
             </div>
 
@@ -228,86 +210,49 @@ export function SettingsModal({
 
           {pinSuccess && (
             <div className="p-2 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] rounded-lg flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5" />
+              <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
               <span>{pinSuccess}</span>
             </div>
           )}
 
-          {/* Change PIN Controls */}
-          {hasConfiguredPin && !isChangingPin && (
-            <div className="flex items-center justify-between pt-2 border-t border-zinc-200">
-              <button
-                type="button"
-                onClick={() => setIsChangingPin(true)}
-                className="text-xs font-medium text-zinc-700 hover:text-zinc-900 flex items-center gap-1"
-              >
-                <Key className="w-3.5 h-3.5" />
-                <span>Change PIN</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleRemovePin}
-                className="text-xs font-medium text-rose-600 hover:text-rose-700 flex items-center gap-1"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Remove PIN</span>
-              </button>
-            </div>
-          )}
-
-          {/* PIN Setup / Edit Form */}
-          {isChangingPin && (
-            <div className="pt-2 border-t border-zinc-200 flex flex-col gap-2.5">
-              {pinError && (
-                <div className="p-2 bg-rose-50 text-rose-700 border border-rose-200 text-[11px] rounded-lg">
-                  {pinError}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="New 4-6 digit PIN"
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value)}
-                  className="bg-white border border-zinc-200 px-3 py-1.5 text-xs font-mono rounded-lg text-zinc-900 focus:outline-none focus:border-zinc-400"
-                />
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="Confirm PIN"
-                  value={confirmPin}
-                  onChange={(e) => setConfirmPin(e.target.value)}
-                  className="bg-white border border-zinc-200 px-3 py-1.5 text-xs font-mono rounded-lg text-zinc-900 focus:outline-none focus:border-zinc-400"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2">
+          {/* Change or Set PIN Button */}
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-200">
+            {hasConfiguredPin ? (
+              <>
                 <button
                   type="button"
                   onClick={() => {
-                    setIsChangingPin(false);
-                    setNewPin('');
-                    setConfirmPin('');
-                    setPinError('');
+                    setIsChangingPin(true);
+                    setShowSetPinModal(true);
                   }}
-                  className="px-3 py-1 text-xs text-zinc-600 hover:text-zinc-900"
+                  className="text-xs font-medium text-zinc-700 hover:text-zinc-900 flex items-center gap-1"
                 >
-                  Cancel
+                  <Key className="w-3.5 h-3.5" />
+                  <span>Change PIN</span>
                 </button>
                 <button
                   type="button"
-                  onClick={handleSavePin}
-                  className="px-3 py-1 rounded-md bg-zinc-900 text-white text-xs font-medium"
+                  onClick={handleRemovePin}
+                  className="text-xs font-medium text-rose-600 hover:text-rose-700 flex items-center gap-1"
                 >
-                  Save PIN
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Remove PIN</span>
                 </button>
-              </div>
-            </div>
-          )}
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsChangingPin(false);
+                  setShowSetPinModal(true);
+                }}
+                className="text-xs font-medium text-zinc-900 hover:text-zinc-700 flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Configure 4-Digit PIN</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Notification Reminder Section */}
@@ -382,6 +327,14 @@ export function SettingsModal({
           </button>
         </div>
       </div>
+
+      {/* Set / Change PIN Keypad Modal */}
+      <SetPinModal
+        isOpen={showSetPinModal}
+        onClose={() => setShowSetPinModal(false)}
+        onSuccess={handlePinSetSuccess}
+        isChanging={isChangingPin}
+      />
     </div>
   );
 }

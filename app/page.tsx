@@ -50,6 +50,13 @@ function formatAmount(amount: number): string {
   }).format(amount);
 }
 
+function getLocalMonthKey(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -57,7 +64,7 @@ export default function Home() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [categories, setCategories] = useState<CategoryData[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<CategoryData[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => getLocalMonthKey());
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [historyType, setHistoryType] = useState<'all' | 'expense' | 'income'>('all');
   const [isConfigured, setIsConfigured] = useState<boolean>(true);
@@ -99,8 +106,10 @@ export default function Home() {
       setIncomes(incList);
       setAssets(assetList);
 
+      const currentMonth = getLocalMonthKey();
       const uniqueMonths = Array.from(
         new Set([
+          currentMonth,
           ...expList.map((e) => (typeof e?.date === 'string' ? e.date.substring(0, 7) : '')),
           ...incList.map((i) => (typeof i?.date === 'string' ? i.date.substring(0, 7) : '')),
         ])
@@ -574,7 +583,6 @@ export default function Home() {
                   expenses={expenses}
                   categories={categories}
                   onDelete={handleDeleteExpense}
-                  showBalances={showBalances}
                 />
               </div>
             )}
@@ -588,7 +596,6 @@ export default function Home() {
                   incomes={incomes}
                   categories={incomeCategories}
                   onDelete={handleDeleteIncome}
-                  showBalances={showBalances}
                 />
               </div>
             )}

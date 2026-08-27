@@ -50,11 +50,11 @@ export function PinModal({
   }, [onSuccess, onClose]);
 
   const handleDigit = useCallback((digit: string) => {
-    if (pin.length < 6) {
+    if (pin.length < 4) {
       const nextPin = pin + digit;
       setPin(nextPin);
       setError('');
-      if (nextPin.length >= 4) {
+      if (nextPin.length === 4) {
         handleVerify(nextPin);
       }
     }
