@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertCircle, Trash2, ReceiptText } from 'lucide-react';
+import { Trash2, ReceiptText } from 'lucide-react';
 import { Expense, CategoryData } from '@/lib/types';
 import { deleteExpense } from '@/lib/apiClient';
 import { CategoryBadge } from './CategoryBadge';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -36,14 +37,13 @@ export function ExpenseList({
     if (!expenseToDelete) return;
     const { id } = expenseToDelete;
 
-    setExpenseToDelete(null);
     setDeletingId(id);
     try {
       await deleteExpense(id);
       onDelete(id);
+      setExpenseToDelete(null);
     } catch (err) {
-      console.error(err);
-      alert('Failed to delete expense');
+      console.error('Failed to delete expense:', err);
     } finally {
       setDeletingId(null);
     }
@@ -77,35 +77,21 @@ export function ExpenseList({
   return (
     <div className="flex flex-col gap-4 w-full">
       {/* Delete Confirmation Modal */}
-      {expenseToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-xl border border-zinc-200 p-6 max-w-sm w-full shadow-lg flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-zinc-900">
-              <AlertCircle className="w-5 h-5 text-rose-600" />
-              <h3 className="font-semibold text-base text-zinc-900">Delete Expense?</h3>
-            </div>
-            <p className="text-xs text-zinc-600">
-              Are you sure you want to delete <strong>{expenseToDelete.title}</strong>?
-            </p>
-            <div className="flex justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => setExpenseToDelete(null)}
-                className="px-4 py-2 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 btn-press"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold btn-press"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!expenseToDelete}
+        onClose={() => setExpenseToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Expense Record?"
+        description={
+          <>
+            Are you sure you want to delete <strong>{expenseToDelete?.title}</strong>? This action will remove the record permanently from your ledger.
+          </>
+        }
+        confirmLabel="Delete Record"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={deletingId === expenseToDelete?.id}
+      />
 
       {sortedDates.map((date) => {
         const dayExpenses = grouped[date];

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, Lock, Edit2, Trash2, Wallet, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Lock, Edit2, Trash2, Wallet } from 'lucide-react';
 import { Asset } from '@/lib/types';
 import { deleteAsset } from '@/lib/apiClient';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface AssetListProps {
   assets: Asset[];
@@ -33,7 +34,7 @@ export function AssetList({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [assetToDelete, setAssetToDelete] = useState<{ id: string; name: string } | null>(null);
 
-  const totalAssets = assets.reduce((sum, a) => sum + a.amount, 0);
+  const totalAssets = assets.reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
 
   const triggerDelete = (id: string, name: string) => {
     setAssetToDelete({ id, name: name || 'this asset' });
@@ -43,14 +44,13 @@ export function AssetList({
     if (!assetToDelete) return;
     const { id } = assetToDelete;
 
-    setAssetToDelete(null);
     setDeletingId(id);
     try {
       await deleteAsset(id);
       onDelete(id);
+      setAssetToDelete(null);
     } catch (err) {
-      console.error(err);
-      alert('Failed to delete asset');
+      console.error('Failed to delete asset:', err);
     } finally {
       setDeletingId(null);
     }
@@ -59,35 +59,21 @@ export function AssetList({
   return (
     <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-6">
       {/* Delete Confirmation Modal */}
-      {assetToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-xl border border-zinc-200 p-6 max-w-sm w-full shadow-lg flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-zinc-900">
-              <AlertCircle className="w-5 h-5 text-rose-600" />
-              <h3 className="font-semibold text-base text-zinc-900">Remove Holding?</h3>
-            </div>
-            <p className="text-xs text-zinc-600">
-              Are you sure you want to remove <strong>{assetToDelete.name}</strong> from your portfolio?
-            </p>
-            <div className="flex justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => setAssetToDelete(null)}
-                className="px-4 py-2 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 btn-press"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold btn-press"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!assetToDelete}
+        onClose={() => setAssetToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Remove Asset Holding?"
+        description={
+          <>
+            Are you sure you want to remove <strong>{assetToDelete?.name}</strong> from your portfolio?
+          </>
+        }
+        confirmLabel="Remove Asset"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={deletingId === assetToDelete?.id}
+      />
 
       {/* Hero Portfolio Valuation Banner */}
       <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">

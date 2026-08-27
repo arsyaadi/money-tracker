@@ -19,6 +19,7 @@ import {
   removeSecurityPin,
 } from '@/lib/security';
 import { SetPinModal } from './SetPinModal';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -52,6 +53,7 @@ export function SettingsModal({
   const [pinEnabled, setPinEnabledState] = useState<boolean>(() => isPinEnabled());
   const [hasConfiguredPin, setHasConfiguredPin] = useState<boolean>(() => isPinConfigured());
   const [showSetPinModal, setShowSetPinModal] = useState<boolean>(false);
+  const [showRemovePinConfirm, setShowRemovePinConfirm] = useState<boolean>(false);
   const [isChangingPin, setIsChangingPin] = useState<boolean>(false);
   const [pinSuccess, setPinSuccess] = useState<string>('');
 
@@ -100,13 +102,16 @@ export function SettingsModal({
     setTimeout(() => setPinSuccess(''), 3000);
   };
 
+  const handleConfirmRemovePin = () => {
+    removeSecurityPin();
+    setHasConfiguredPin(false);
+    setPinEnabledState(false);
+    setShowRemovePinConfirm(false);
+    onPinConfigChange?.();
+  };
+
   const handleRemovePin = () => {
-    if (confirm('Are you sure you want to remove your Security PIN?')) {
-      removeSecurityPin();
-      setHasConfiguredPin(false);
-      setPinEnabledState(false);
-      onPinConfigChange?.();
-    }
+    setShowRemovePinConfirm(true);
   };
 
   const handleSave = () => {
@@ -334,6 +339,18 @@ export function SettingsModal({
         onClose={() => setShowSetPinModal(false)}
         onSuccess={handlePinSetSuccess}
         isChanging={isChangingPin}
+      />
+
+      {/* Remove PIN Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showRemovePinConfirm}
+        onClose={() => setShowRemovePinConfirm(false)}
+        onConfirm={handleConfirmRemovePin}
+        title="Remove Security PIN?"
+        description="Are you sure you want to remove your 4-digit Security PIN? Financial figures will no longer be protected behind a PIN code."
+        confirmLabel="Remove PIN"
+        cancelLabel="Keep PIN"
+        variant="danger"
       />
     </div>
   );

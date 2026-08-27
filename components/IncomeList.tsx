@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertCircle, Trash2, ArrowDownLeft } from 'lucide-react';
+import { Trash2, ArrowDownLeft } from 'lucide-react';
 import { Income, CategoryData } from '@/lib/types';
 import { deleteIncome } from '@/lib/apiClient';
 import { CategoryBadge } from './CategoryBadge';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface IncomeListProps {
   incomes: Income[];
@@ -36,14 +37,13 @@ export function IncomeList({
     if (!incomeToDelete) return;
     const { id } = incomeToDelete;
 
-    setIncomeToDelete(null);
     setDeletingId(id);
     try {
       await deleteIncome(id);
       onDelete(id);
+      setIncomeToDelete(null);
     } catch (err) {
-      console.error(err);
-      alert('Failed to delete income');
+      console.error('Failed to delete income:', err);
     } finally {
       setDeletingId(null);
     }
@@ -77,35 +77,21 @@ export function IncomeList({
   return (
     <div className="flex flex-col gap-4 w-full">
       {/* Delete Confirmation Modal */}
-      {incomeToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-xl border border-zinc-200 p-6 max-w-sm w-full shadow-lg flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-zinc-900">
-              <AlertCircle className="w-5 h-5 text-rose-600" />
-              <h3 className="font-semibold text-base text-zinc-900">Delete Income Entry?</h3>
-            </div>
-            <p className="text-xs text-zinc-600">
-              Are you sure you want to delete <strong>{incomeToDelete.title}</strong>?
-            </p>
-            <div className="flex justify-end gap-2.5 pt-2">
-              <button
-                type="button"
-                onClick={() => setIncomeToDelete(null)}
-                className="px-4 py-2 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 btn-press"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold btn-press"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={!!incomeToDelete}
+        onClose={() => setIncomeToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Income Record?"
+        description={
+          <>
+            Are you sure you want to delete <strong>{incomeToDelete?.title}</strong>? This action will remove the record permanently from your ledger.
+          </>
+        }
+        confirmLabel="Delete Record"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={deletingId === incomeToDelete?.id}
+      />
 
       {sortedDates.map((date) => {
         const dayIncomes = grouped[date];
