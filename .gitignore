@@ -48,3 +48,8 @@ public/sw*
 
 # opennext
 .open-next/
+
+# tauri
+src-tauri/target/
+src-tauri/gen/
+

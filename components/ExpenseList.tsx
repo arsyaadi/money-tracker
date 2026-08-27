@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Expense, CategoryData } from '@/lib/types';
+import { deleteExpense } from '@/lib/apiClient';
 import { CategoryBadge } from './CategoryBadge';
 
 interface ExpenseListProps {
@@ -33,12 +34,7 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
     setExpenseToDelete(null);
     setDeletingId(id);
     try {
-      const deploymentId = localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
-      const res = await fetch(`/api/expenses/${id}`, {
-        method: 'DELETE',
-        headers: deploymentId ? { 'x-deployment-id': deploymentId } : {},
-      });
-      if (!res.ok) throw new Error('Failed to delete');
+      await deleteExpense(id);
       onDelete(id);
     } catch (err) {
       console.error(err);

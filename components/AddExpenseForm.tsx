@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Expense, CategoryData } from '@/lib/types';
+import { addExpense, addCategory, deleteCategory } from '@/lib/apiClient';
 
 function getLocalToday() {
   const now = new Date();
@@ -45,26 +46,12 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
     setSuccess(false);
 
     try {
-      const deploymentId = localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
-      const res = await fetch('/api/expenses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(deploymentId && { 'x-deployment-id': deploymentId })
-        },
-        body: JSON.stringify({
-          ...form,
-          amount: Number(form.amount),
-        }),
+      const created = await addExpense({
+        ...form,
+        amount: Number(form.amount),
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error ?? 'Failed to add expense');
-      }
-
-      onAdd(data.expense);
+      onAdd(created);
       setSuccess(true);
       setForm({ date: today, amount: '', category: categories.length > 0 ? categories[0].name : 'Food', title: '' });
       setTimeout(() => setSuccess(false), 2500);
@@ -83,17 +70,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
     setError('');
     
     try {
-      const deploymentId = localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
-      const res = await fetch('/api/categories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(deploymentId && { 'x-deployment-id': deploymentId })
-        },
-        body: JSON.stringify(newCat),
-      });
-
-      if (!res.ok) throw new Error('Failed to create category');
+      await addCategory(newCat);
       
       onRefreshCategories();
       setForm(prev => ({ ...prev, category: newCat.name }));
@@ -120,13 +97,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
     setError('');
     
     try {
-      const deploymentId = localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
-      const res = await fetch(`/api/categories/${id}`, {
-        method: 'DELETE',
-        headers: deploymentId ? { 'x-deployment-id': deploymentId } : {}
-      });
-
-      if (!res.ok) throw new Error('Failed to delete category');
+      await deleteCategory(id);
       
       onRefreshCategories();
       if (form.category === name) {
@@ -338,7 +309,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
                 disabled={addingCatLoading || !newCat.name}
                 style={{ width: '100%', padding: '8px', background: 'var(--text-primary)', color: 'var(--bg-card)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontFamily: "'DM Mono', monospace", fontWeight: 600 }}
               >
-                'Save Category'
+                Save Category
               </button>
             </div>
           ) : (
@@ -462,7 +433,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
             transition: 'background 0.2s',
           }}
         >
-          'Add Expense'
+          Add Expense
         </button>
       </form>
     </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Asset } from '@/lib/types';
+import { addAsset, updateAsset } from '@/lib/apiClient';
 import { EmojiPicker } from './EmojiPicker';
 
 interface AddAssetFormProps {
@@ -43,51 +44,21 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
     setSuccess(false);
 
     try {
-      const deploymentId = localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
-
       if (isEditing && editingAsset && onUpdate) {
-        const res = await fetch('/api/assets', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(deploymentId && { 'x-deployment-id': deploymentId })
-          },
-          body: JSON.stringify({
-            id: editingAsset.id,
-            name: form.name,
-            amount: Number(form.amount),
-            icon: form.icon,
-          }),
+        const updated = await updateAsset({
+          id: editingAsset.id,
+          name: form.name,
+          amount: Number(form.amount),
+          icon: form.icon,
         });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error ?? 'Failed to update asset');
-        }
-
-        onUpdate(data.asset);
+        onUpdate(updated);
       } else {
-        const res = await fetch('/api/assets', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(deploymentId && { 'x-deployment-id': deploymentId })
-          },
-          body: JSON.stringify({
-            name: form.name,
-            amount: Number(form.amount),
-            icon: form.icon,
-          }),
+        const created = await addAsset({
+          name: form.name,
+          amount: Number(form.amount),
+          icon: form.icon,
         });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error ?? 'Failed to add asset');
-        }
-
-        onAdd(data.asset);
+        onAdd(created);
         setForm({ name: '', amount: '', icon: '💰' });
       }
 

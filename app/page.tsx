@@ -11,6 +11,15 @@ import { SettingsModal } from '@/components/SettingsModal';
 import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetList } from '@/components/AssetList';
 import { initNotifications } from '@/lib/notifications';
+import {
+  getCategories,
+  getIncomeCategories,
+  getMonthlyTotal,
+  getMonthlyIncomeTotal,
+  getExpenses,
+  getIncomes,
+  getAssets,
+} from '@/lib/apiClient';
 
 type Tab = 'add-expense' | 'add-income' | 'assets' | 'history' | 'summary';
 type HistoryFilter = 'all' | 'expense' | 'income';
@@ -54,12 +63,9 @@ export default function Home() {
     const deploymentId = getDeploymentId();
     if (!deploymentId) return;
     try {
-      const res = await fetch('/api/categories', {
-        headers: { 'x-deployment-id': deploymentId }
-      });
-      const data = await res.json();
-      if (res.ok && data.categories) {
-        setCategories(data.categories);
+      const data = await getCategories();
+      if (data) {
+        setCategories(data);
       }
     } catch (err) {
       console.error('Failed to fetch categories:', err);
@@ -70,12 +76,9 @@ export default function Home() {
     const deploymentId = getDeploymentId();
     if (!deploymentId) return;
     try {
-      const res = await fetch('/api/income-categories', {
-        headers: { 'x-deployment-id': deploymentId }
-      });
-      const data = await res.json();
-      if (res.ok && data.categories) {
-        setIncomeCategories(data.categories);
+      const data = await getIncomeCategories();
+      if (data) {
+        setIncomeCategories(data);
       }
     } catch (err) {
       console.error('Failed to fetch income categories:', err);
@@ -85,34 +88,28 @@ export default function Home() {
   const fetchMonthlyTotal = useCallback(async () => {
     const deploymentId = getDeploymentId();
     if (!deploymentId) return;
+    const currentMonth = getLocalMonthKey();
     try {
-      const currentMonth = getLocalMonthKey();
-      const res = await fetch(`/api/expenses/monthly-total?month=${currentMonth}`, {
-        headers: { 'x-deployment-id': deploymentId }
-      });
-      const data = await res.json();
-      if (res.ok && data.total !== undefined) {
+      const data = await getMonthlyTotal(currentMonth);
+      if (data && typeof data.total === 'number') {
         setCurrentMonthTotal(data.total);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch monthly total:', err);
     }
   }, []);
 
   const fetchMonthlyIncome = useCallback(async () => {
     const deploymentId = getDeploymentId();
     if (!deploymentId) return;
+    const currentMonth = getLocalMonthKey();
     try {
-      const currentMonth = getLocalMonthKey();
-      const res = await fetch(`/api/incomes/monthly-total?month=${currentMonth}`, {
-        headers: { 'x-deployment-id': deploymentId }
-      });
-      const data = await res.json();
-      if (res.ok && data.total !== undefined) {
+      const data = await getMonthlyIncomeTotal(currentMonth);
+      if (data && typeof data.total === 'number') {
         setCurrentMonthIncome(data.total);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch monthly income:', err);
     }
   }, []);
 
@@ -123,21 +120,11 @@ export default function Home() {
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams();
-      if (filterMonth) params.set('month', filterMonth);
-      if (filterCategory) params.set('category', filterCategory);
-      
-      const url = '/api/expenses' + (params.toString() ? '?' + params.toString() : '');
-      const res = await fetch(url, {
-        headers: { 'x-deployment-id': deploymentId }
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Failed to load expenses');
-      setExpenses(data.expenses);
+      const data = await getExpenses(filterMonth, filterCategory);
+      setExpenses(data);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -149,18 +136,10 @@ export default function Home() {
     const deploymentId = getDeploymentId();
     if (!deploymentId) return;
     try {
-      const params = new URLSearchParams();
-      if (filterMonth) params.set('month', filterMonth);
-      
-      const url = '/api/incomes' + (params.toString() ? '?' + params.toString() : '');
-      const res = await fetch(url, {
-        headers: { 'x-deployment-id': deploymentId }
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Failed to load incomes');
-      setIncomes(data.incomes);
+      const data = await getIncomes(filterMonth);
+      setIncomes(data);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch incomes:', err);
     }
   }, [filterMonth]);
 
@@ -168,14 +147,10 @@ export default function Home() {
     const deploymentId = getDeploymentId();
     if (!deploymentId) return;
     try {
-      const res = await fetch('/api/assets', {
-        headers: { 'x-deployment-id': deploymentId }
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Failed to load assets');
-      setAssets(data.assets);
+      const data = await getAssets();
+      setAssets(data);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch assets:', err);
     }
   }, []);
 
