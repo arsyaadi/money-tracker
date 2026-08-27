@@ -175,7 +175,7 @@ export function AssetList({
 
                   <div className="flex items-center gap-4">
                     <div className="font-mono text-sm sm:text-base font-bold text-zinc-900 tabular-nums">
-                      {formatAmount(asset.amount)}
+                      {showBalances ? formatAmount(asset.amount) : '••••••'}
                     </div>
 
                     <div className="flex items-center gap-1">
