@@ -29,6 +29,7 @@ import {
   getIncomeCategories,
 } from '@/lib/apiClient';
 import { isPinEnabled } from '@/lib/security';
+import { initNotifications } from '@/lib/notifications';
 import { AddExpenseForm } from '@/components/AddExpenseForm';
 import { AddIncomeForm } from '@/components/AddIncomeForm';
 import { AddAssetForm } from '@/components/AddAssetForm';
@@ -145,6 +146,7 @@ export default function Home() {
   }, [updatePinState]);
 
   useEffect(() => {
+    initNotifications();
     loadData();
   }, [loadData]);
 

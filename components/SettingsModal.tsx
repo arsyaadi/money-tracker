@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sliders, X, RefreshCw, Cloud, Bell, Lock, Key, ShieldCheck, Trash2, Plus } from 'lucide-react';
 import { NotificationSettings } from '@/lib/types';
 import {
@@ -8,8 +8,10 @@ import {
   saveSettings,
   requestPermission,
   getPermissionStatus,
-  startReminderCheck,
-  stopReminderCheck,
+  isNotificationPermissionGranted,
+  scheduleDailyReminder,
+  cancelDailyReminder,
+  sendTestNotification,
   DEFAULT_SETTINGS,
 } from '@/lib/notifications';
 import {
@@ -48,6 +50,17 @@ export function SettingsModal({
     if (typeof window === 'undefined') return 'default';
     return getPermissionStatus();
   });
+  const [testStatus, setTestStatus] = useState<string>('');
+
+  useEffect(() => {
+    if (isOpen) {
+      isNotificationPermissionGranted().then((granted) => {
+        if (granted) {
+          setPermissionStatus('granted');
+        }
+      });
+    }
+  }, [isOpen]);
 
   // PIN settings state
   const [pinEnabled, setPinEnabledState] = useState<boolean>(() => isPinEnabled());
@@ -66,13 +79,13 @@ export function SettingsModal({
         const newSettings = { ...settings, enabled: true };
         setSettings(newSettings);
         saveSettings(newSettings);
-        startReminderCheck();
+        await scheduleDailyReminder(newSettings.reminderTime);
       }
     } else {
       const newSettings = { ...settings, enabled: false };
       setSettings(newSettings);
       saveSettings(newSettings);
-      stopReminderCheck();
+      await cancelDailyReminder();
     }
   };
 
@@ -80,6 +93,20 @@ export function SettingsModal({
     const newSettings = { ...settings, reminderTime: time };
     setSettings(newSettings);
     saveSettings(newSettings);
+    if (newSettings.enabled) {
+      scheduleDailyReminder(time);
+    }
+  };
+
+  const handleSendTest = async () => {
+    setTestStatus('Sending test notification...');
+    const success = await sendTestNotification();
+    if (success) {
+      setTestStatus('Test notification triggered!');
+    } else {
+      setTestStatus('Failed. Please check notification permission.');
+    }
+    setTimeout(() => setTestStatus(''), 3500);
   };
 
   const handleTogglePinProtection = () => {
@@ -121,7 +148,7 @@ export function SettingsModal({
     }
     saveSettings(settings);
     if (settings.enabled && permissionStatus === 'granted') {
-      startReminderCheck();
+      scheduleDailyReminder(settings.reminderTime);
     }
     onClose();
   };
@@ -296,21 +323,39 @@ export function SettingsModal({
           )}
 
           {settings.enabled && !isBlocked && (
-            <div className="flex items-center justify-between pt-2 border-t border-zinc-200">
-              <label
-                htmlFor="reminder-time"
-                className="text-xs font-medium text-zinc-600"
-              >
-                Reminder Time
-              </label>
-              <input
-                id="reminder-time"
-                type="time"
-                value={settings.reminderTime}
-                onChange={(e) => handleTimeChange(e.target.value)}
-                className="bg-white border border-zinc-200 px-2.5 py-1 text-xs font-mono rounded-md text-zinc-900 focus:outline-none focus:border-zinc-400"
-              />
-            </div>
+            <>
+              <div className="flex items-center justify-between pt-2 border-t border-zinc-200">
+                <label
+                  htmlFor="reminder-time"
+                  className="text-xs font-medium text-zinc-600"
+                >
+                  Reminder Time
+                </label>
+                <input
+                  id="reminder-time"
+                  type="time"
+                  value={settings.reminderTime}
+                  onChange={(e) => handleTimeChange(e.target.value)}
+                  className="bg-white border border-zinc-200 px-2.5 py-1 text-xs font-mono rounded-md text-zinc-900 focus:outline-none focus:border-zinc-400"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 pt-2 border-t border-zinc-200">
+                <button
+                  type="button"
+                  onClick={handleSendTest}
+                  className="w-full py-2 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-medium flex items-center justify-center gap-1.5 btn-press transition-colors"
+                >
+                  <Bell className="w-3.5 h-3.5" />
+                  <span>Send Test Notification</span>
+                </button>
+                {testStatus && (
+                  <p className="text-[11px] text-center text-zinc-600 font-medium">
+                    {testStatus}
+                  </p>
+                )}
+              </div>
+            </>
           )}
         </div>
 
