@@ -259,9 +259,9 @@ export default function Home() {
     .slice(0, 8);
 
   return (
-    <div className="min-h-screen bg-[#fafaf9] text-zinc-900 flex flex-col font-sans pb-24 md:pb-12">
+    <div className="min-h-screen bg-[#fafaf9] text-zinc-900 flex flex-col font-sans pb-[calc(env(safe-area-inset-bottom,0px)+5.5rem)] md:pb-12">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-zinc-200 px-4 sm:px-8 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-zinc-200 px-4 sm:px-8 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] sm:pt-3 flex items-center justify-between transition-all">
         <div className="flex items-center gap-6">
           {/* Logo Brand */}
           <div
@@ -709,7 +709,7 @@ export default function Home() {
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-zinc-200 px-2 py-1 flex items-center justify-around">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-zinc-200 px-2 pt-1.5 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] flex items-center justify-around">
         {[
           { id: 'dashboard', label: 'Dash', icon: LayoutDashboard },
           { id: 'add-expense', label: 'Expense', icon: MinusCircle },

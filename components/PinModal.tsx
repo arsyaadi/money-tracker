@@ -86,7 +86,7 @@ export function PinModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 pt-[max(env(safe-area-inset-top,0px),1rem)] pb-[max(env(safe-area-inset-bottom,0px),1rem)] animate-in fade-in duration-150">
       <div
         className={`bg-white rounded-xl border border-zinc-200 p-6 sm:p-7 max-w-xs w-full shadow-lg flex flex-col items-center gap-5 transition-transform ${
           isShaking ? 'animate-bounce' : ''
