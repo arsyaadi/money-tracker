@@ -1,839 +1,562 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Expense, Income, CategoryData, Asset, CATEGORIES as DEFAULT_CATEGORIES, INCOME_CATEGORIES as DEFAULT_INCOME_CATEGORIES } from '@/lib/types';
+import { useState, useEffect, useCallback, useTransition } from 'react';
+import Image from 'next/image';
+import { Expense, Income, Asset, CategoryData } from '@/lib/types';
+import {
+  getExpenses,
+  getIncomes,
+  getAssets,
+  getCategories,
+  getIncomeCategories,
+} from '@/lib/apiClient';
 import { AddExpenseForm } from '@/components/AddExpenseForm';
 import { AddIncomeForm } from '@/components/AddIncomeForm';
+import { AddAssetForm } from '@/components/AddAssetForm';
+import { AssetList } from '@/components/AssetList';
 import { ExpenseList } from '@/components/ExpenseList';
 import { IncomeList } from '@/components/IncomeList';
 import { SummaryDashboard } from '@/components/SummaryDashboard';
 import { SettingsModal } from '@/components/SettingsModal';
-import { AddAssetForm } from '@/components/AddAssetForm';
-import { AssetList } from '@/components/AssetList';
-import { initNotifications } from '@/lib/notifications';
-import {
-  getCategories,
-  getIncomeCategories,
-  getMonthlyTotal,
-  getMonthlyIncomeTotal,
-  getExpenses,
-  getIncomes,
-  getAssets,
-} from '@/lib/apiClient';
+import { CategoryBadge } from '@/components/CategoryBadge';
 
-type Tab = 'add-expense' | 'add-income' | 'assets' | 'history' | 'summary';
-type HistoryFilter = 'all' | 'expense' | 'income';
-type SummaryView = 'combined' | 'separate';
+type TabType = 'dashboard' | 'add-expense' | 'add-income' | 'assets' | 'history' | 'summary';
 
-function getLocalMonthKey() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
+function formatAmount(amount: number): string {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(amount);
 }
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [categories, setCategories] = useState<CategoryData[]>([]);
   const [incomeCategories, setIncomeCategories] = useState<CategoryData[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [availableMonths, setAvailableMonths] = useState<string[]>([]);
+  const [historyType, setHistoryType] = useState<'all' | 'expense' | 'income'>('all');
+  const [isConfigured, setIsConfigured] = useState<boolean>(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
-  
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  
-  const [tab, setTab] = useState<Tab>('add-expense');
-  const [filterMonth, setFilterMonth] = useState(() => getLocalMonthKey());
-  const [filterCategory, setFilterCategory] = useState('');
-  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>('all');
-  const [summaryView, setSummaryView] = useState<SummaryView>('combined');
-  const [currentMonthTotal, setCurrentMonthTotal] = useState(0);
-  const [currentMonthIncome, setCurrentMonthIncome] = useState(0);
-  
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [, startTransition] = useTransition();
 
-  const getDeploymentId = () => {
-    return localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID') || '';
+  const checkConfigured = () => {
+    if (typeof window === 'undefined') return true;
+    return !!localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
   };
 
-  const fetchCategories = useCallback(async () => {
-    const deploymentId = getDeploymentId();
-    if (!deploymentId) return;
-    try {
-      const data = await getCategories();
-      if (data) {
-        setCategories(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch categories:', err);
-    }
-  }, []);
-
-  const fetchIncomeCategories = useCallback(async () => {
-    const deploymentId = getDeploymentId();
-    if (!deploymentId) return;
-    try {
-      const data = await getIncomeCategories();
-      if (data) {
-        setIncomeCategories(data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch income categories:', err);
-    }
-  }, []);
-
-  const fetchMonthlyTotal = useCallback(async () => {
-    const deploymentId = getDeploymentId();
-    if (!deploymentId) return;
-    const currentMonth = getLocalMonthKey();
-    try {
-      const data = await getMonthlyTotal(currentMonth);
-      if (data && typeof data.total === 'number') {
-        setCurrentMonthTotal(data.total);
-      }
-    } catch (err) {
-      console.error('Failed to fetch monthly total:', err);
-    }
-  }, []);
-
-  const fetchMonthlyIncome = useCallback(async () => {
-    const deploymentId = getDeploymentId();
-    if (!deploymentId) return;
-    const currentMonth = getLocalMonthKey();
-    try {
-      const data = await getMonthlyIncomeTotal(currentMonth);
-      if (data && typeof data.total === 'number') {
-        setCurrentMonthIncome(data.total);
-      }
-    } catch (err) {
-      console.error('Failed to fetch monthly income:', err);
-    }
-  }, []);
-
-  const fetchExpenses = useCallback(async () => {
-    const deploymentId = getDeploymentId();
-    if (!deploymentId) {
-      setShowSettingsModal(true);
-      setLoading(false);
-      return;
-    }
+  const loadData = useCallback(async () => {
     setLoading(true);
-    setError('');
+    setIsConfigured(checkConfigured());
+
     try {
-      const data = await getExpenses(filterMonth, filterCategory);
-      setExpenses(data);
+      const [cats, incCats, expList, incList, assetList] = await Promise.all([
+        getCategories().catch(() => []),
+        getIncomeCategories().catch(() => []),
+        getExpenses(selectedMonth || undefined).catch(() => []),
+        getIncomes(selectedMonth || undefined).catch(() => []),
+        getAssets().catch(() => []),
+      ]);
+
+      setCategories(cats);
+      setIncomeCategories(incCats);
+      setExpenses(expList);
+      setIncomes(incList);
+      setAssets(assetList);
+
+      const uniqueMonths = Array.from(
+        new Set([
+          ...expList.map((e) => e.date.substring(0, 7)),
+          ...incList.map((i) => i.date.substring(0, 7)),
+        ])
+      ).filter(Boolean).sort().reverse();
+
+      setAvailableMonths(uniqueMonths);
     } catch (err) {
-      setError((err as Error).message);
+      console.error('Failed to load data:', err);
     } finally {
       setLoading(false);
     }
-  }, [filterMonth, filterCategory]);
-
-  const fetchIncomes = useCallback(async () => {
-    const deploymentId = getDeploymentId();
-    if (!deploymentId) return;
-    try {
-      const data = await getIncomes(filterMonth);
-      setIncomes(data);
-    } catch (err) {
-      console.error('Failed to fetch incomes:', err);
-    }
-  }, [filterMonth]);
-
-  const fetchAssets = useCallback(async () => {
-    const deploymentId = getDeploymentId();
-    if (!deploymentId) return;
-    try {
-      const data = await getAssets();
-      setAssets(data);
-    } catch (err) {
-      console.error('Failed to fetch assets:', err);
-    }
-  }, []);
+  }, [selectedMonth]);
 
   useEffect(() => {
-    fetchExpenses();
-    fetchIncomes();
-    fetchAssets();
-    fetchMonthlyTotal();
-    fetchMonthlyIncome();
-    fetchCategories();
-    fetchIncomeCategories();
-  }, [fetchExpenses, fetchIncomes, fetchAssets, fetchMonthlyTotal, fetchMonthlyIncome, fetchCategories, fetchIncomeCategories]);
-
-  useEffect(() => {
-    initNotifications();
-  }, []);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 480);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+    loadData();
+  }, [loadData]);
 
   const handleAddExpense = (expense: Expense) => {
-    setExpenses((prev) => [expense, ...prev]);
-    fetchMonthlyTotal();
+    startTransition(() => {
+      setExpenses((prev) => [expense, ...prev]);
+      setActiveTab('dashboard');
+    });
+  };
+
+  const handleAddIncome = (income: Income) => {
+    startTransition(() => {
+      setIncomes((prev) => [income, ...prev]);
+      setActiveTab('dashboard');
+    });
   };
 
   const handleDeleteExpense = (id: string) => {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
-    fetchMonthlyTotal();
-  };
-
-  const handleAddIncome = (income: Income) => {
-    setIncomes((prev) => [income, ...prev]);
-    fetchMonthlyIncome();
   };
 
   const handleDeleteIncome = (id: string) => {
     setIncomes((prev) => prev.filter((i) => i.id !== id));
-    fetchMonthlyIncome();
   };
 
   const handleAddAsset = (asset: Asset) => {
-    setAssets((prev) => [asset, ...prev]);
-    setEditingAsset(null);
-  };
-
-  const handleUpdateAsset = (asset: Asset) => {
-    setAssets((prev) => prev.map((a) => (a.id === asset.id ? asset : a)));
+    setAssets((prev) => {
+      const exists = prev.some((a) => a.id === asset.id);
+      if (exists) {
+        return prev.map((a) => (a.id === asset.id ? asset : a));
+      }
+      return [asset, ...prev];
+    });
     setEditingAsset(null);
   };
 
   const handleDeleteAsset = (id: string) => {
     setAssets((prev) => prev.filter((a) => a.id !== id));
+    if (editingAsset?.id === id) {
+      setEditingAsset(null);
+    }
   };
 
   const handleEditAsset = (asset: Asset) => {
     setEditingAsset(asset);
+    setActiveTab('assets');
   };
 
-  const handleCancelEditAsset = () => {
-    setEditingAsset(null);
-  };
+  // Calculations for Master Dashboard
+  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  const totalIncomes = incomes.reduce((s, i) => s + i.amount, 0);
+  const netCashFlow = totalIncomes - totalExpenses;
+  const totalAssetNetWorth = assets.reduce((s, a) => s + a.amount, 0);
+  const totalNetPosition = totalAssetNetWorth + netCashFlow;
 
-  const handleRefreshAll = () => {
-    fetchExpenses();
-    fetchIncomes();
-    fetchAssets();
-    fetchMonthlyTotal();
-    fetchMonthlyIncome();
-    fetchCategories();
-    fetchIncomeCategories();
-  };
-
-  const netBalance = currentMonthIncome - currentMonthTotal;
+  // Recent transactions merged
+  const recentTransactions = [
+    ...expenses.map((e) => ({ ...e, type: 'expense' as const })),
+    ...incomes.map((i) => ({ ...i, type: 'income' as const })),
+  ]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 8);
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'var(--bg)',
-        color: 'var(--text-primary)',
-      }}
-    >
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          overflow: 'hidden',
-          pointerEvents: 'none',
-          zIndex: 0,
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: '-200px',
-            right: '-200px',
-            width: '600px',
-            height: '600px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(200,169,110,0.04) 0%, transparent 70%)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '-300px',
-            left: '-200px',
-            width: '700px',
-            height: '700px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(107,157,232,0.04) 0%, transparent 70%)',
-          }}
-        />
-      </div>
-
-      {loading && <GlobalLoadingOverlay />}
-
-      <SettingsModal
-        isOpen={showSettingsModal}
-        onClose={() => setShowSettingsModal(false)}
-        onRefresh={handleRefreshAll}
-        onDeploymentIdSave={() => {
-          fetchExpenses();
-          fetchIncomes();
-          fetchCategories();
-          fetchIncomeCategories();
-          fetchMonthlyTotal();
-          fetchMonthlyIncome();
-        }}
-      />
-
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          maxWidth: '1100px',
-          margin: '0 auto',
-          padding: isMobile ? '16px 16px 80px' : '16px 16px 64px',
-        }}
-      >
-        <header
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start', 
-            flexWrap: 'wrap', 
-            gap: '16px',
-            justifyContent: 'space-between',
-            marginBottom: '36px',
-            paddingBottom: '24px',
-            borderBottom: '3px solid var(--border)',
-            flexDirection: 'column',
-          }}
-        >
-          <div style={{ width: '100%' }}>
-            <div
-              style={{
-                fontSize: 'var(--font-xxs)',
-                fontFamily: "'DM Mono', monospace",
-                color: 'var(--accent)',
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
-                marginBottom: '6px',
-              }}
-            >
-              Personal Finance
-            </div>
-            <h1
-              style={{
-                fontFamily: "'DM Serif Display', serif",
-                fontSize: 'var(--font-hero)',
-                fontWeight: 400,
-                lineHeight: 1.1,
-                color: 'var(--text-primary)',
-              }}
-            >
-              Money Tracker
-            </h1>
-          </div>
-
-          <div style={{ width: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <div className="stats-header" style={{ marginBottom: 0 }}>Monthly Summary</div>
-              <button
-                onClick={() => setShowSummary(!showSummary)}
-                style={{
-                  background: 'none',
-                  border: '2px solid var(--border)',
-                  borderRadius: '4px',
-                  padding: '4px',
-                  cursor: 'pointer',
-                  color: 'var(--text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                title={showSummary ? 'Hide values' : 'Show values'}
-              >
-                {showSummary ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                    <line x1="1" y1="1" x2="23" y2="23" />
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
-              </button>
-            </div>
-            <div className="stats-container">
-              <div className="stat-item">
-                <div className="stat-label">
-                  <span className="stat-label-full">This Month&apos;s Income</span>
-                  <span className="stat-label-short">Income</span>
-                </div>
-                <div className="stat-value" style={{ color: '#22c55e' }}>
-                  {showSummary
-                    ? new Intl.NumberFormat('id-ID', {
-                        style: 'currency',
-                        currency: 'IDR',
-                        minimumFractionDigits: 0,
-                      }).format(currentMonthIncome)
-                    : 'Rp ••••••••'}
-                </div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-label">
-                  <span className="stat-label-full">This Month&apos;s Spending</span>
-                  <span className="stat-label-short">Spending</span>
-                </div>
-                <div className="stat-value" style={{ color: currentMonthTotal > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>
-                  {showSummary
-                    ? new Intl.NumberFormat('id-ID', {
-                        style: 'currency',
-                        currency: 'IDR',
-                        minimumFractionDigits: 0,
-                      }).format(currentMonthTotal)
-                    : 'Rp ••••••••'}
-                </div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-label">
-                  <span className="stat-label-full">Net Balance</span>
-                  <span className="stat-label-short">Net</span>
-                </div>
-                <div className="stat-value" style={{ color: netBalance >= 0 ? '#22c55e' : 'var(--danger)' }}>
-                  {showSummary
-                    ? new Intl.NumberFormat('id-ID', {
-                        style: 'currency',
-                        currency: 'IDR',
-                        minimumFractionDigits: 0,
-                      }).format(netBalance)
-                    : 'Rp ••••••••'}
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {error && (
+    <div className="min-h-screen bg-[#fafaf9] text-zinc-900 flex flex-col font-sans pb-24 md:pb-12">
+      {/* Top Navbar */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-zinc-200 px-4 sm:px-8 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          {/* Logo Brand */}
           <div
-            style={{
-              padding: '14px 18px',
-              borderRadius: '10px',
-              background: 'var(--danger-dim)',
-              border: '1px solid rgba(224, 85, 85, 0.25)',
-              color: 'var(--danger)',
-              fontSize: 'var(--font-small)',
-              marginBottom: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              flexWrap: 'wrap',
-            }}
+            onClick={() => setActiveTab('dashboard')}
+            className="flex items-center gap-2.5 cursor-pointer select-none group"
           >
-            <span>{error}</span>
+            <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center shadow-xs">
+              <Image src="/logo.png" alt="Logo" width={28} height={28} className="object-contain" />
+            </div>
+            <span className="font-bold text-sm tracking-tight text-zinc-900">
+              Money Tracker
+            </span>
+          </div>
+
+          {/* Desktop Nav Items */}
+          <nav className="hidden md:flex items-center gap-1">
+            {[
+              { id: 'dashboard', label: 'Dashboard' },
+              { id: 'add-expense', label: 'Expense' },
+              { id: 'add-income', label: 'Income' },
+              { id: 'assets', label: 'Assets' },
+              { id: 'history', label: 'Ledger' },
+              { id: 'summary', label: 'Summary' },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as TabType)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'bg-zinc-100 text-zinc-900 font-semibold'
+                      : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Right Actions */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={loadData}
+            disabled={loading}
+            className="px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-xs font-medium text-zinc-700 flex items-center gap-1.5 btn-press transition-colors"
+            title="Sync Database"
+          >
+            <span className={`material-symbols-outlined text-sm ${loading ? 'animate-spin text-zinc-900' : ''}`}>
+              sync
+            </span>
+            <span className="hidden sm:inline">Sync</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 btn-press transition-colors"
+            title="Settings"
+          >
+            <span className="material-symbols-outlined text-base">tune</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Cloud DB Notice */}
+      {!isConfigured && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 flex items-center justify-between">
+          <div className="flex items-center gap-2 max-w-[1200px] mx-auto w-full">
+            <span className="material-symbols-outlined text-base text-amber-700">info</span>
+            <span>Configure Google Apps Script Deployment ID for remote cloud storage sync.</span>
             <button
-              onClick={() => { fetchExpenses(); fetchIncomes(); }}
-              style={{
-                background: 'rgba(224, 85, 85, 0.15)',
-                border: '1px solid rgba(224, 85, 85, 0.3)',
-                color: 'var(--danger)',
-                borderRadius: '6px',
-                padding: '4px 10px',
-                fontSize: 'var(--font-xs)',
-                cursor: 'pointer',
-                fontFamily: "'DM Mono', monospace",
-                whiteSpace: 'nowrap',
-              }}
+              onClick={() => setIsSettingsOpen(true)}
+              className="font-semibold underline ml-auto text-amber-900"
             >
-              Retry
+              Configure
             </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {!isMobile && (
-          <div
-            className="tabs-container"
-            style={{
-              marginBottom: '24px',
-              width: '90%',
-              maxWidth: '400px',
-              margin: '0 auto 24px',
-            }}
-          >
-            {(
-              [
-                { id: 'add-expense', label: 'Add Expense' },
-                { id: 'add-income', label: 'Add Income' },
-                { id: 'assets', label: 'Assets' },
-                { id: 'history', label: 'History' },
-                { id: 'summary', label: 'Summary' },
-              ] as { id: Tab; label: string }[]
-            ).map(({ id, label }) => (
-              <button
-                key={id}
-                onClick={() => setTab(id)}
-style={{
-                  padding: '8px 12px', flex: '1 1 auto',
-                  borderRadius: '4px',
-                  border: 'none',
-                  background: tab === id ? (id === 'add-income' ? '#22c55e' : id === 'assets' ? '#3b82f6' : 'var(--accent)') : 'transparent',
-                  color: tab === id ? (id === 'add-income' || id === 'assets' ? '#fff' : '#0d0d0f') : 'var(--text-secondary)',
-                  fontWeight: tab === id ? 600 : 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* Main Content Area */}
+      <main className="flex-1 w-full max-w-[1100px] mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+        {/* ================= VIEW: DASHBOARD ================= */}
+        {activeTab === 'dashboard' && (
+          <div className="flex flex-col gap-6">
+            {/* Hero Net Worth Card */}
+            <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Total Financial Position
+                </span>
+                <div className="text-3xl sm:text-5xl font-mono font-bold tracking-tight text-zinc-900 tabular-nums">
+                  {formatAmount(totalNetPosition)}
+                </div>
+                <p className="text-xs text-zinc-500 font-sans mt-0.5">
+                  Liquid asset holdings plus current period net cash flow.
+                </p>
+              </div>
 
-        {(tab === 'history' || tab === 'summary') && (
-          <div style={{
-            display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap',
-            background: 'var(--bg-card)', padding: '16px', borderRadius: '4px',
-            border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)'
-          }}>
-            <div style={{ flex: '1 1 140px' }}>
-              <label style={{ display: 'block', fontSize: 'var(--font-xxs)', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
-                Filter Month
-              </label>
-              <input
-                type="month"
-                value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
-                style={{
-                  width: '100%', padding: '8px 12px', borderRadius: '4px',
-                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                  background: 'var(--bg)', color: 'var(--text-primary)',
-                  fontFamily: "'DM Mono', monospace"
-                }}
-              />
+              {/* Inflow & Outflow Summary */}
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 flex-1 sm:flex-initial">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 block mb-0.5">
+                    Inflow
+                  </span>
+                  <span className="font-mono text-sm sm:text-base font-bold text-emerald-700 tabular-nums">
+                    + {formatAmount(totalIncomes)}
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 flex-1 sm:flex-initial">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-700 block mb-0.5">
+                    Outflow
+                  </span>
+                  <span className="font-mono text-sm sm:text-base font-bold text-rose-700 tabular-nums">
+                    - {formatAmount(totalExpenses)}
+                  </span>
+                </div>
+              </div>
             </div>
-            {tab === 'history' && (
-              <div style={{ flex: '1 1 140px' }}>
-                <label style={{ display: 'block', fontSize: 'var(--font-xxs)', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
-                  Filter Category
-                </label>
-                <select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                  style={{
-                    width: '100%', padding: '8px 12px', borderRadius: '4px',
-                    border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                    background: 'var(--bg)', color: 'var(--text-primary)',
-                    fontFamily: "'DM Mono', monospace"
-                  }}
-                >
-                  <option value="">All Categories</option>
-                  <optgroup label="Expenses">
-                    {categories.length > 0 
-                      ? categories.map(cat => (
-                          <option key={cat.id || cat.name} value={cat.name}>{cat.icon} {cat.name}</option>
-                        ))
-                      : DEFAULT_CATEGORIES.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                      ))
-                    }
-                  </optgroup>
-                  <optgroup label="Income">
-                    {incomeCategories.length > 0 
-                      ? incomeCategories.map(cat => (
-                          <option key={cat.id || cat.name} value={cat.name}>{cat.icon} {cat.name}</option>
-                        ))
-                      : DEFAULT_INCOME_CATEGORIES.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
-                      ))
-                    }
-                  </optgroup>
-                </select>
+
+            {/* Quick Action Bento Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div
+                onClick={() => setActiveTab('add-expense')}
+                className="group cursor-pointer bg-white border border-zinc-200 rounded-xl p-5 shadow-xs hover:border-zinc-300 hover:shadow-sm btn-press transition-all flex flex-col justify-between gap-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-rose-600 uppercase tracking-wider">
+                    Expense
+                  </span>
+                  <span className="material-symbols-outlined text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all text-sm">
+                    arrow_forward
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900">Record Expense</h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">Log outgoing spending.</p>
+                </div>
               </div>
-            )}
-            {tab === 'history' && (
-              <div style={{ flex: '1 1 140px' }}>
-                <label style={{ display: 'block', fontSize: 'var(--font-xxs)', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
-                  Show
-                </label>
-                <select
-                  value={historyFilter}
-                  onChange={(e) => setHistoryFilter(e.target.value as HistoryFilter)}
-                  style={{
-                    width: '100%', padding: '8px 12px', borderRadius: '4px',
-                    border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                    background: 'var(--bg)', color: 'var(--text-primary)',
-                    fontFamily: "'DM Mono', monospace"
-                  }}
-                >
-                  <option value="all">All</option>
-                  <option value="expense">Expenses Only</option>
-                  <option value="income">Income Only</option>
-                </select>
+
+              <div
+                onClick={() => setActiveTab('add-income')}
+                className="group cursor-pointer bg-white border border-zinc-200 rounded-xl p-5 shadow-xs hover:border-zinc-300 hover:shadow-sm btn-press transition-all flex flex-col justify-between gap-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
+                    Income
+                  </span>
+                  <span className="material-symbols-outlined text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all text-sm">
+                    arrow_forward
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900">Record Income</h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">Log revenues and earnings.</p>
+                </div>
               </div>
-            )}
-            {tab === 'summary' && (
-              <div style={{ flex: '1 1 140px' }}>
-                <label style={{ display: 'block', fontSize: 'var(--font-xxs)', color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: "'DM Mono', monospace" }}>
-                  View
-                </label>
-                <select
-                  value={summaryView}
-                  onChange={(e) => setSummaryView(e.target.value as SummaryView)}
-                  style={{
-                    width: '100%', padding: '8px 12px', borderRadius: '4px',
-                    border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                    background: 'var(--bg)', color: 'var(--text-primary)',
-                    fontFamily: "'DM Mono', monospace"
-                  }}
-                >
-                  <option value="combined">Combined (Net Balance)</option>
-                  <option value="separate">Separate</option>
-                </select>
+
+              <div
+                onClick={() => setActiveTab('assets')}
+                className="group cursor-pointer bg-white border border-zinc-200 rounded-xl p-5 shadow-xs hover:border-zinc-300 hover:shadow-sm btn-press transition-all flex flex-col justify-between gap-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                    Portfolio
+                  </span>
+                  <span className="material-symbols-outlined text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all text-sm">
+                    arrow_forward
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900">Asset Holdings</h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">Manage bank balances.</p>
+                </div>
               </div>
-            )}
+            </div>
+
+            {/* Recent Transactions */}
+            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-xs">
+              <div className="px-6 py-3.5 border-b border-zinc-200 bg-zinc-50/60 flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-800">
+                  Recent Activity
+                </h3>
+                <button
+                  onClick={() => setActiveTab('history')}
+                  className="text-xs text-zinc-500 hover:text-zinc-900 font-medium flex items-center gap-1 transition-colors"
+                >
+                  <span>Full Ledger</span>
+                  <span className="material-symbols-outlined text-sm">chevron_right</span>
+                </button>
+              </div>
+
+              {recentTransactions.length === 0 ? (
+                <div className="p-12 text-center text-xs text-zinc-400">
+                  No transactions recorded yet.
+                </div>
+              ) : (
+                <div className="divide-y divide-zinc-100">
+                  {recentTransactions.map((tx) => {
+                    const isExpense = tx.type === 'expense';
+                    const activeCats = isExpense ? categories : incomeCategories;
+
+                    return (
+                      <div
+                        key={tx.id}
+                        className="p-3.5 sm:px-6 flex items-center justify-between gap-4 hover:bg-zinc-50/70 transition-colors"
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <CategoryBadge categoryName={tx.category} categories={activeCats} size="sm" />
+                          <div className="min-w-0">
+                            <div className="text-xs sm:text-sm font-medium text-zinc-800 truncate">
+                              {tx.title || <span className="text-zinc-400 italic">Untitled</span>}
+                            </div>
+                            <div className="font-mono text-[10px] text-zinc-400 mt-0.5">
+                              {tx.date}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="font-mono text-xs sm:text-sm font-bold tabular-nums">
+                          {isExpense ? (
+                            <span className="text-rose-600">- {formatAmount(tx.amount)}</span>
+                          ) : (
+                            <span className="text-emerald-600">+ {formatAmount(tx.amount)}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {tab === 'add-expense' ? (
-          <AddExpenseForm categories={categories} onAdd={handleAddExpense} onRefreshCategories={fetchCategories} />
-        ) : tab === 'add-income' ? (
-          <AddIncomeForm categories={incomeCategories} onAdd={handleAddIncome} onRefreshCategories={fetchIncomeCategories} />
-        ) : tab === 'assets' ? (
-          <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-            <AddAssetForm 
-              onAdd={handleAddAsset} 
-              editingAsset={editingAsset}
-              onUpdate={handleUpdateAsset}
-              onCancelEdit={handleCancelEditAsset}
+        {/* ================= VIEW: RECORD EXPENSE ================= */}
+        {activeTab === 'add-expense' && (
+          <div className="flex flex-col gap-6">
+            <AddExpenseForm
+              categories={categories}
+              onAdd={handleAddExpense}
+              onRefreshCategories={loadData}
             />
-            {assets.length > 0 && (
-              <div style={{ marginTop: '24px' }}>
-                <h3 style={{ marginBottom: '12px', fontSize: 'var(--font-value)', color: '#3b82f6', fontFamily: "'DM Mono', monospace" }}>
-                  Your Assets
+          </div>
+        )}
+
+        {/* ================= VIEW: RECORD INCOME ================= */}
+        {activeTab === 'add-income' && (
+          <div className="flex flex-col gap-6">
+            <AddIncomeForm
+              categories={incomeCategories}
+              onAdd={handleAddIncome}
+              onRefreshCategories={loadData}
+            />
+          </div>
+        )}
+
+        {/* ================= VIEW: ASSETS & PORTFOLIO ================= */}
+        {activeTab === 'assets' && (
+          <div className="flex flex-col gap-8">
+            <AssetList
+              assets={assets}
+              onDelete={handleDeleteAsset}
+              onEdit={handleEditAsset}
+            />
+
+            <AddAssetForm
+              onAdd={handleAddAsset}
+              editingAsset={editingAsset}
+              onUpdate={handleAddAsset}
+              onCancelEdit={() => setEditingAsset(null)}
+            />
+          </div>
+        )}
+
+        {/* ================= VIEW: LEDGER HISTORY ================= */}
+        {activeTab === 'history' && (
+          <div className="flex flex-col gap-6">
+            {/* Header & Filter Bar */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900">
+                  Transaction Records
+                </h1>
+                <p className="text-xs text-zinc-500 mt-0.5">Historical ledger logs and archives.</p>
+              </div>
+
+              {/* Filter Controls */}
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
+                <div className="flex p-0.5 rounded-lg bg-zinc-100 border border-zinc-200">
+                  {(['all', 'expense', 'income'] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setHistoryType(type)}
+                      className={`px-3 py-1 rounded-md text-xs uppercase tracking-wider font-semibold transition-all ${
+                        historyType === type
+                          ? 'bg-white text-zinc-900 shadow-xs'
+                          : 'text-zinc-500 hover:text-zinc-900'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+
+                {availableMonths.length > 0 && (
+                  <select
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-white border border-zinc-200 text-xs font-mono px-3 py-1.5 rounded-lg text-zinc-700 focus:outline-none focus:border-zinc-400"
+                  >
+                    <option value="">All Months</option>
+                    {availableMonths.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+
+            {/* Filtered Lists */}
+            {(historyType === 'all' || historyType === 'expense') && (
+              <div className="flex flex-col gap-2.5">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Expenses ({expenses.length})
                 </h3>
-                <AssetList 
-                  assets={assets} 
-                  onDelete={handleDeleteAsset}
-                  onEdit={handleEditAsset}
+                <ExpenseList
+                  expenses={expenses}
+                  categories={categories}
+                  onDelete={handleDeleteExpense}
+                />
+              </div>
+            )}
+
+            {(historyType === 'all' || historyType === 'income') && (
+              <div className="flex flex-col gap-2.5 pt-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Incomes ({incomes.length})
+                </h3>
+                <IncomeList
+                  incomes={incomes}
+                  categories={incomeCategories}
+                  onDelete={handleDeleteIncome}
                 />
               </div>
             )}
           </div>
-        ) : (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 350px), 1fr))',
-              gap: '20px',
-              alignItems: 'start',
-            }}
-          >
-            {tab === 'history' && (
-              <>
-                {(historyFilter === 'all' || historyFilter === 'expense') && (
-                  <div style={{ gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
-                    <h3 style={{ marginBottom: '12px', fontSize: 'var(--font-value)', color: 'var(--text-secondary)', fontFamily: "'DM Mono', monospace" }}>
-                      💸 Expenses
-                    </h3>
-                    <ExpenseList expenses={expenses} categories={categories} onDelete={handleDeleteExpense} />
-                  </div>
-                )}
-                {(historyFilter === 'all' || historyFilter === 'income') && (
-                  <div style={{ gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
-                    <h3 style={{ marginBottom: '12px', fontSize: 'var(--font-value)', color: '#22c55e', fontFamily: "'DM Mono', monospace" }}>
-                      💰 Income
-                    </h3>
-                    <IncomeList incomes={incomes} categories={incomeCategories} onDelete={handleDeleteIncome} />
-                  </div>
-                )}
-              </>
-            )}
-            {tab === 'summary' && (
-               <div style={{ gridColumn: '1 / -1', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
-                  <SummaryDashboard 
-                    expenses={expenses} 
-                    incomes={incomes}
-                    categories={categories} 
-                    incomeCategories={incomeCategories}
-                    filterMonth={filterMonth}
-                    view={summaryView}
-                  />
-               </div>
-            )}
-          </div>
         )}
 
-        {!isMobile && (
-          <footer
-            style={{
-              marginTop: '48px',
-              paddingTop: '24px',
-              borderTop: '3px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexDirection: 'column',
-              gap: '16px',
-            }}
-          >
-            <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span
-                style={{
-                  fontSize: 'var(--font-xxs)',
-                  fontFamily: "'DM Mono', monospace",
-                  color: 'var(--text-muted)',
-                }}
-              >
-                Built for you 💖
-              </span>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => setShowSettingsModal(true)}
-                  style={{
-                    background: 'none',
-                    border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                    borderRadius: '6px',
-                    padding: '5px 12px',
-                    cursor: 'pointer',
-                    color: 'var(--text-muted)',
-                    fontSize: 'var(--font-xxs)',
-                    fontFamily: "'DM Mono', monospace",
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-                  }}
-                >
-                  ⚙️ Settings
-                </button>
-                <button
-onClick={() => {
-                    fetchExpenses();
-                    fetchIncomes();
-                    fetchAssets();
-                    fetchMonthlyTotal();
-                    fetchMonthlyIncome();
-                    fetchCategories();
-                    fetchIncomeCategories();
-                  }}
-                  style={{
-                    background: 'none',
-                    border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                    borderRadius: '6px',
-                    padding: '5px 12px',
-                    cursor: 'pointer',
-                    color: 'var(--text-muted)',
-                    fontSize: 'var(--font-xxs)',
-                    fontFamily: "'DM Mono', monospace",
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-hover)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
-                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)';
-                  }}
-                >
-                  ↻ Refresh
-                </button>
-              </div>
-            </div>
-          </footer>
+        {/* ================= VIEW: FINANCIAL ANALYTICS ================= */}
+        {activeTab === 'summary' && (
+          <SummaryDashboard
+            expenses={expenses}
+            incomes={incomes}
+            categories={categories}
+            incomeCategories={incomeCategories}
+            filterMonth={selectedMonth}
+            view="combined"
+          />
         )}
-      </div>
+      </main>
 
-      {isMobile && (
-        <nav className="mobile-bottom-nav">
-          {(
-            [
-              { id: 'add-expense', label: 'Expense', icon: '➖' },
-              { id: 'add-income', label: 'Income', icon: '➕' },
-              { id: 'assets', label: 'Assets', icon: '💰' },
-              { id: 'history', label: 'History', icon: '📋' },
-              { id: 'summary', label: 'Summary', icon: '📊' },
-            ] as { id: Tab; label: string; icon: string }[]
-          ).map(({ id, label, icon }) => (
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-zinc-200 px-2 py-1 flex items-center justify-around">
+        {[
+          { id: 'dashboard', label: 'Dash', icon: 'dashboard' },
+          { id: 'add-expense', label: 'Expense', icon: 'remove_circle_outline' },
+          { id: 'add-income', label: 'Income', icon: 'add_circle_outline' },
+          { id: 'assets', label: 'Assets', icon: 'account_balance_wallet' },
+          { id: 'history', label: 'Ledger', icon: 'history' },
+          { id: 'summary', label: 'Stats', icon: 'analytics' },
+        ].map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
             <button
-              key={id}
-              onClick={() => setTab(id)}
-              className={`mobile-nav-item ${tab === id ? 'active' : ''}`}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: tab === id
-                  ? (id === 'add-income' ? '#22c55e' : id === 'assets' ? '#3b82f6' : 'var(--accent)')
-                  : 'var(--text-muted)',
-              }}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as TabType)}
+              className={`flex flex-col items-center justify-center p-1.5 rounded-lg transition-colors ${
+                isActive
+                  ? 'text-zinc-900 font-bold'
+                  : 'text-zinc-400 hover:text-zinc-700'
+              }`}
             >
-              <span className="nav-icon">{icon}</span>
-              <span className="nav-label">{label}</span>
+              <span className="material-symbols-outlined text-lg">{tab.icon}</span>
+              <span className="text-[10px] font-label uppercase mt-0.5">{tab.label}</span>
             </button>
-          ))}
-          <button
-            onClick={() => setShowSettingsModal(true)}
-            className="mobile-nav-item"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-            }}
-          >
-            <span className="nav-icon">⚙️</span>
-            <span className="nav-label">Settings</span>
-          </button>
-        </nav>
-      )}
-    </div>
-  );
-}
+          );
+        })}
+      </nav>
 
-function GlobalLoadingOverlay() {
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(255,219,253,0.7)', backdropFilter: 'blur(8px)', gap: '16px', color: 'var(--text-primary)'
-    }}>
-                <div
-            style={{
-              position: 'relative',
-              width: '44px',
-              height: '44px',
-            }}
-          >
-            <div style={{
-              position: 'absolute', inset: 0,
-              border: '4px solid var(--border)',
-              borderRadius: '50%',
-              boxShadow: 'var(--brutal-shadow)',
-              background: 'var(--bg-elevated)',
-            }} />
-            <div
-              style={{
-                position: 'absolute', inset: 0,
-                border: '4px solid transparent',
-                borderTopColor: 'var(--accent)',
-                borderRadius: '50%',
-                animation: 'spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite',
-                zIndex: 1,
-              }}
-            />
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          </div>
-      <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: 'var(--font-body)', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
-        PROCESSING...
-      </div>
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onDeploymentIdSave={loadData}
+        onRefresh={loadData}
+      />
     </div>
   );
 }

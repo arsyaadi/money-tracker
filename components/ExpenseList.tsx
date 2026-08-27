@@ -21,7 +21,7 @@ function formatAmount(amount: number): string {
 
 export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [expenseToDelete, setExpenseToDelete] = useState<{id: string, title: string} | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<{ id: string; title: string } | null>(null);
 
   const triggerDelete = (id: string, title: string) => {
     setExpenseToDelete({ id, title: title || 'this expense' });
@@ -30,7 +30,7 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
   const confirmDelete = async () => {
     if (!expenseToDelete) return;
     const { id } = expenseToDelete;
-    
+
     setExpenseToDelete(null);
     setDeletingId(id);
     try {
@@ -58,113 +58,43 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
 
   if (expenses.length === 0) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '40px 16px',
-          background: 'var(--bg-card)',
-          border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-          borderRadius: '4px',
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ fontSize: 'var(--font-icon)', marginBottom: '16px', opacity: 0.4 }}>📊</div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-body)' }}>
-          No expenses yet. Add your first one!
-        </p>
+      <div className="bg-white border border-zinc-200 rounded-xl p-12 text-center flex flex-col items-center justify-center gap-2 text-zinc-400">
+        <span className="material-symbols-outlined text-3xl text-zinc-300">receipt_long</span>
+        <h3 className="text-sm font-medium text-zinc-700">No expense records found</h3>
+        <p className="text-xs">Entries will appear here in chronological order.</p>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '24px',
-      }}
-    >
-      
-      {/* Delete Confirmation Dialog */}
+    <div className="flex flex-col gap-4 w-full">
+      {/* Delete Confirmation Modal */}
       {expenseToDelete && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)'
-        }}>
-          <div style={{
-            background: 'var(--bg-card)', padding: '32px', borderRadius: '4px', width: '90%', maxWidth: '400px',
-            border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)', textAlign: 'left'
-          }}>
-            <h2 style={{ marginBottom: '16px', fontSize: 'var(--font-title)', fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
-              Delete Expense?
-            </h2>
-            <p style={{ marginBottom: '24px', fontSize: 'var(--font-body)', color: 'var(--text-secondary)' }}>
-              Are you sure you want to delete <strong>{expenseToDelete.title}</strong>? This action cannot be undone.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl border border-zinc-200 p-6 max-w-sm w-full shadow-lg flex flex-col gap-4">
+            <div className="flex items-center gap-2 text-rose-600">
+              <span className="material-symbols-outlined text-xl">warning</span>
+              <h3 className="font-semibold text-base text-zinc-900">Delete Expense?</h3>
+            </div>
+            <p className="text-xs text-zinc-600">
+              Are you sure you want to delete <strong>{expenseToDelete.title}</strong>?
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <div className="flex justify-end gap-2.5 pt-2">
               <button
+                type="button"
                 onClick={() => setExpenseToDelete(null)}
-                style={{
-                  padding: '10px 20px', background: 'var(--bg-elevated)', color: 'var(--text-primary)',
-                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow-sm)', borderRadius: '4px', cursor: 'pointer', fontFamily: "'DM Mono', monospace", fontWeight: 600
-                }}
+                className="px-4 py-2 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 btn-press"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={confirmDelete}
-                style={{
-                  padding: '10px 20px', background: 'var(--danger)', color: '#fff',
-                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow-sm)', borderRadius: '4px', cursor: 'pointer', fontFamily: "'DM Mono', monospace", fontWeight: 600
-                }}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold btn-press"
               >
                 Delete
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      
-      {/* Local Fullscreen Loading Overlay for Deletions */}
-      {deletingId && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(255,219,253,0.7)', backdropFilter: 'blur(8px)', gap: '16px', color: 'var(--text-primary)'
-        }}>
-                    <div
-            style={{
-              position: 'relative',
-              width: '44px',
-              height: '44px',
-            }}
-          >
-            {/* Static background circle to hold the shadow cleanly */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              border: '4px solid var(--border)',
-              borderRadius: '50%',
-              boxShadow: 'var(--brutal-shadow)',
-              background: 'var(--bg-elevated)',
-            }} />
-            {/* Spinning element with no shadow */}
-            <div
-              style={{
-                position: 'absolute', inset: 0,
-                border: '4px solid transparent',
-                borderTopColor: 'var(--accent)',
-                borderRadius: '50%',
-                animation: 'spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite',
-                zIndex: 1,
-              }}
-            />
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          </div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: 'var(--font-body)', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
-            DELETING EXPENSE...
           </div>
         </div>
       )}
@@ -178,167 +108,65 @@ export function ExpenseList({ expenses, categories, onDelete }: ExpenseListProps
           weekday: 'short',
           month: 'short',
           day: 'numeric',
+          year: 'numeric',
         }).format(d);
 
         return (
           <div
             key={date}
-            style={{
-              background: 'var(--bg-card)',
-              border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-              borderRadius: '4px',
-              overflow: 'hidden',
-            }}
+            className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-xs"
           >
             {/* Day Header */}
-            <div
-              style={{
-                padding: '16px 16px 12px',
-                borderBottom: '3px solid var(--border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 'var(--font-small)',
-                  fontWeight: 600,
-                  color: 'var(--text-secondary)',
-                  letterSpacing: '0.02em',
-                }}
-              >
+            <div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50/60 flex items-center justify-between">
+              <span className="font-medium text-xs text-zinc-800">
                 {formattedDate}
-              </div>
-              <div
-                style={{
-                  fontSize: 'var(--font-xs)',
-                  background: 'var(--bg-elevated)',
-                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-                  padding: '3px 10px',
-                  borderRadius: '20px',
-                }}
-              >
-                {dayExpenses.length} items
-              </div>
-            </div>
-
-            {/* Day Summary */}
-            <div
-              style={{
-                padding: '10px 16px',
-                background: 'var(--bg-elevated)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottom: '3px solid var(--border)',
-              }}
-            >
-              <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-secondary)' }}>
-                Daily Total
               </span>
-              <span
-                style={{
-                  fontSize: 'var(--font-body)',
-                  fontFamily: "'DM Mono', monospace",
-                  color: 'var(--accent)',
-                }}
-              >
-                {formatAmount(dayTotal)}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-zinc-400 font-mono">
+                  {dayExpenses.length} {dayExpenses.length === 1 ? 'item' : 'items'}
+                </span>
+                <span className="font-mono text-xs font-bold text-rose-600 tabular-nums">
+                  - {formatAmount(dayTotal)}
+                </span>
+              </div>
             </div>
 
             {/* Rows */}
-            {dayExpenses.map((expense, i) => (
-              <div
-                key={expense.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '14px 16px', flexWrap: 'wrap', columnGap: '12px', rowGap: '8px',
-                  borderBottom:
-                    i < dayExpenses.length - 1
-                      ? '3px solid var(--border)'
-                      : 'none',
-                  transition: 'background 0.1s ease',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-elevated)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.background = 'transparent';
-                }}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      marginBottom: '4px',
-                    }}
-                  >
-                    <CategoryBadge categoryName={expense.category} categories={categories} size="sm" />
-                    <span
-                      style={{
-                        fontSize: 'var(--font-small)',
-                        color: expense.title ? 'var(--text-primary)' : 'var(--text-muted)',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        fontStyle: expense.title ? 'normal' : 'italic',
-                      }}
-                    >
-                      {expense.title || 'Untitled'}
+            <div className="divide-y divide-zinc-100">
+              {dayExpenses.map((expense) => (
+                <div
+                  key={expense.id}
+                  className="p-3.5 sm:px-5 flex items-center justify-between gap-4 hover:bg-zinc-50/70 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <CategoryBadge
+                      categoryName={expense.category}
+                      categories={categories}
+                      size="sm"
+                    />
+                    <span className="text-xs font-medium text-zinc-800 truncate font-sans">
+                      {expense.title || <span className="text-zinc-400 italic">Untitled</span>}
                     </span>
                   </div>
-                </div>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '16px',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 'var(--font-body)',
-                      fontFamily: "'DM Mono', monospace",
-                      color: 'var(--text-primary)',
-                      letterSpacing: '-0.02em',
-                    }}
-                  >
-                    {formatAmount(expense.amount)}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-xs sm:text-sm font-bold text-rose-600 tabular-nums">
+                      - {formatAmount(expense.amount)}
+                    </span>
 
-                  <button
-                    onClick={() => triggerDelete(expense.id, expense.title)}
-                    disabled={deletingId === expense.id}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: deletingId === expense.id ? 'default' : 'pointer',
-                      color: 'var(--text-muted)',
-                      fontSize: 'var(--font-body)',
-                      padding: '4px',
-                      lineHeight: 1,
-                      transition: 'color 0.15s ease',
-                      flexShrink: 0,
-                    }}
-                    onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.color = 'var(--danger)')
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)')
-                    }
-                    aria-label="Delete expense"
-                  >
-                    {deletingId === expense.id ? '...' : '×'}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => triggerDelete(expense.id, expense.title)}
+                      disabled={deletingId === expense.id}
+                      className="p-1 text-zinc-400 hover:text-rose-600 transition-colors rounded"
+                      title="Delete expense"
+                    >
+                      <span className="material-symbols-outlined text-base">delete</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         );
       })}

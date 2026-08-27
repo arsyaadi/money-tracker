@@ -3,19 +3,20 @@
 import { useState } from 'react';
 import { Expense, CategoryData } from '@/lib/types';
 import { addExpense, addCategory, deleteCategory } from '@/lib/apiClient';
+import { EmojiPicker } from './EmojiPicker';
 
 function getLocalToday() {
   const now = new Date();
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
 interface AddExpenseFormProps {
   categories: CategoryData[];
   onAdd: (expense: Expense) => void;
-  onRefreshCategories: () => void;
+  onRefreshCategories?: () => void;
 }
 
 export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddExpenseFormProps) {
@@ -27,20 +28,24 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
     category: categories.length > 0 ? categories[0].name : 'Food',
     title: '',
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  
+
   // Category creation state
   const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [newCat, setNewCat] = useState({ name: '', icon: '📌', color: '#ec4899' });
+  const [newCat, setNewCat] = useState({ name: '', icon: '📌', color: '#e11d48' });
   const [addingCatLoading, setAddingCatLoading] = useState(false);
   const [deletingCatId, setDeletingCatId] = useState<string | null>(null);
-  const [categoryToDelete, setCategoryToDelete] = useState<{id: string, name: string} | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.amount || Number(form.amount) <= 0) {
+      setError('Please enter a valid expense amount');
+      return;
+    }
     setLoading(true);
     setError('');
     setSuccess(false);
@@ -53,8 +58,13 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
 
       onAdd(created);
       setSuccess(true);
-      setForm({ date: today, amount: '', category: categories.length > 0 ? categories[0].name : 'Food', title: '' });
-      setTimeout(() => setSuccess(false), 2500);
+      setForm({
+        date: today,
+        amount: '',
+        category: categories.length > 0 ? categories[0].name : 'Food',
+        title: '',
+      });
+      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -65,17 +75,16 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCat.name.trim()) return;
-    
+
     setAddingCatLoading(true);
     setError('');
-    
+
     try {
       await addCategory(newCat);
-      
-      onRefreshCategories();
-      setForm(prev => ({ ...prev, category: newCat.name }));
+      onRefreshCategories?.();
+      setForm((prev) => ({ ...prev, category: newCat.name }));
       setIsAddingCategory(false);
-      setNewCat({ name: '', icon: '📌', color: '#ec4899' });
+      setNewCat({ name: '', icon: '📌', color: '#e11d48' });
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -91,19 +100,18 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
   const confirmDeleteCategory = async () => {
     if (!categoryToDelete) return;
     const { id, name } = categoryToDelete;
-    
+
     setCategoryToDelete(null);
     setDeletingCatId(id);
     setError('');
-    
+
     try {
       await deleteCategory(id);
-      
-      onRefreshCategories();
+      onRefreshCategories?.();
       if (form.category === name) {
-        setForm(prev => ({ 
-          ...prev, 
-          category: categories.find(c => c.name !== name)?.name || 'Food' 
+        setForm((prev) => ({
+          ...prev,
+          category: categories.find((c) => c.name !== name)?.name || 'Food',
         }));
       }
     } catch (err) {
@@ -114,51 +122,40 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
   };
 
   return (
-    <div
-      style={{
-        background: 'var(--bg-card)',
-        border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-        borderRadius: '4px',
-        padding: '24px 16px',
-        maxWidth: '460px',
-        margin: '0 auto',
-      }}
-    >
-      
-      {/* Delete Confirmation Dialog */}
+    <div className="w-full max-w-[620px] mx-auto flex flex-col gap-6">
+      {/* Header */}
+      <header className="flex flex-col gap-1">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900">
+          Record Expense
+        </h1>
+        <p className="text-xs sm:text-sm text-zinc-500 font-sans">
+          Log outgoing expenditure and assign category.
+        </p>
+      </header>
+
+      {/* Delete Confirmation Modal */}
       {categoryToDelete && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)'
-        }}>
-          <div style={{
-            background: 'var(--bg-card)', padding: '32px', borderRadius: '4px', width: '90%', maxWidth: '400px',
-            border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)'
-          }}>
-            <h2 style={{ marginBottom: '16px', fontSize: 'var(--font-title)', fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
-              Delete Category?
-            </h2>
-            <p style={{ marginBottom: '24px', fontSize: 'var(--font-body)', color: 'var(--text-secondary)' }}>
-              Are you sure you want to delete the <strong>{categoryToDelete.name}</strong> category? This action cannot be undone.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl border border-zinc-200 p-6 max-w-sm w-full shadow-lg flex flex-col gap-4">
+            <div className="flex items-center gap-2 text-rose-600">
+              <span className="material-symbols-outlined text-xl">warning</span>
+              <h3 className="font-semibold text-base text-zinc-900">Delete Category?</h3>
+            </div>
+            <p className="text-xs text-zinc-600">
+              Are you sure you want to remove <strong>{categoryToDelete.name}</strong>?
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <div className="flex justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setCategoryToDelete(null)}
-                style={{
-                  padding: '10px 20px', background: 'var(--bg-elevated)', color: 'var(--text-primary)',
-                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow-sm)', borderRadius: '4px', cursor: 'pointer', fontFamily: "'DM Mono', monospace", fontWeight: 600
-                }}
+                className="px-4 py-2 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 btn-press"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={confirmDeleteCategory}
-                style={{
-                  padding: '10px 20px', background: 'var(--danger)', color: '#fff',
-                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow-sm)', borderRadius: '4px', cursor: 'pointer', fontFamily: "'DM Mono', monospace", fontWeight: 600
-                }}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold btn-press"
               >
                 Delete
               </button>
@@ -167,296 +164,165 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
         </div>
       )}
 
-      <div style={{ marginBottom: '24px' }}>
-        <h2
-          style={{
-            fontFamily: "'DM Serif Display', serif",
-            fontSize: 'var(--font-value-lg)',
-            marginBottom: '4px',
-            color: 'var(--text-primary)',
-          }}
-        >
-          Add Expense
-        </h2>
-        <p style={{ fontSize: 'var(--font-small)', color: 'var(--text-secondary)' }}>
-          Keep track of your spending
-        </p>
-      </div>
-
-      
-      {/* Local Fullscreen Loading Overlay for Actions */}
-      {(loading || addingCatLoading || deletingCatId) && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(255,219,253,0.7)', backdropFilter: 'blur(8px)', gap: '16px', color: 'var(--text-primary)'
-        }}>
-                    <div
-            style={{
-              position: 'relative',
-              width: '44px',
-              height: '44px',
-            }}
-          >
-            {/* Static background circle to hold the shadow cleanly */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              border: '4px solid var(--border)',
-              borderRadius: '50%',
-              boxShadow: 'var(--brutal-shadow)',
-              background: 'var(--bg-elevated)',
-            }} />
-            {/* Spinning element with no shadow */}
-            <div
-              style={{
-                position: 'absolute', inset: 0,
-                border: '4px solid transparent',
-                borderTopColor: 'var(--accent)',
-                borderRadius: '50%',
-                animation: 'spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite',
-                zIndex: 1,
-              }}
-            />
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          </div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: 'var(--font-body)', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
-            {loading ? 'ADDING EXPENSE...' : addingCatLoading ? 'SAVING CATEGORY...' : 'DELETING CATEGORY...'}
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '12px' }}>
-          <div>
-            <label style={labelStyle}>Date</label>
-            <input
-              type="date"
-              required
-              value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Amount</label>
-            <input
-              type="number"
-              required
-              min="1"
-              step="any"
-              placeholder="0"
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              style={{
-                ...inputStyle,
-                fontFamily: "'DM Mono', monospace",
-                fontSize: 'var(--font-value)',
-              }}
-            />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={labelStyle}>What was this for? (Optional)</label>
-          <input
-            type="text"
-            placeholder="e.g. Coffee at Starbucks"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <label style={{...labelStyle, marginBottom: 0}}>Category</label>
-            <button 
-              type="button" 
-              onClick={() => setIsAddingCategory(!isAddingCategory)}
-              style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: 'var(--font-xs)', fontWeight: 600, fontFamily: "'DM Mono', monospace" }}
-            >
-              {isAddingCategory ? 'Cancel' : '+ New Category'}
-            </button>
-          </div>
-
-          {isAddingCategory ? (
-            <div style={{ background: 'var(--bg)', padding: '12px', borderRadius: '4px', border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                <input 
-                  type="text" 
-                  placeholder="Emoji 📌" 
-                  value={newCat.icon} 
-                  onChange={e => setNewCat({...newCat, icon: e.target.value})}
-                  style={{...inputStyle, width: '60px', textAlign: 'center'}}
-                  maxLength={2}
-                />
-                <input 
-                  type="text" 
-                  placeholder="Category Name" 
-                  value={newCat.name} 
-                  onChange={e => setNewCat({...newCat, name: e.target.value})}
-                  style={{...inputStyle, flex: 1}}
-                />
-                <input 
-                  type="color" 
-                  value={newCat.color} 
-                  onChange={e => setNewCat({...newCat, color: e.target.value})}
-                  style={{...inputStyle, width: '50px', padding: '2px', cursor: 'pointer'}}
-                />
-              </div>
-              <button 
-                type="button"
-                onClick={handleAddCategory}
-                disabled={addingCatLoading || !newCat.name}
-                style={{ width: '100%', padding: '8px', background: 'var(--text-primary)', color: 'var(--bg-card)', border: 'none', borderRadius: '4px', cursor: 'pointer', fontFamily: "'DM Mono', monospace", fontWeight: 600 }}
-              >
-                Save Category
-              </button>
-            </div>
-          ) : (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(85px, 1fr))',
-                gap: '8px',
-              }}
-            >
-              {categories.map((cat) => {
-                const isSelected = form.category === cat.name;
-                return (
-                  <div
-                    key={cat.id || cat.name}
-                    className="cat-container"
-                    onClick={() => setForm({ ...form, category: cat.name })}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '10px 4px',
-                      position: 'relative',
-                      borderRadius: '4px',
-                      border: `3px solid ${isSelected ? cat.color : 'var(--border)'}`,
-                      background: isSelected ? `${cat.color}18` : 'var(--bg-elevated)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                      fontSize: 'var(--font-xxs)',
-                      fontFamily: "'DM Mono', monospace",
-                      color: isSelected ? cat.color : 'var(--text-secondary)'
-                    }}
-                  >
-                    {cat.id && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteCategory(e, cat.id, cat.name)}
-                        disabled={deletingCatId === cat.id}
-                        style={{
-                          position: 'absolute',
-                          top: '-6px',
-                          right: '-6px',
-                          background: 'var(--danger)',
-                          color: 'white',
-                          border: '2px solid var(--border)',
-                          borderRadius: '50%',
-                          width: '20px',
-                          height: '20px',
-                          fontSize: 'var(--font-xs)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          opacity: 0,
-                          transition: 'opacity 0.2s',
-                          boxShadow: '2px 2px 0px 0px #000',
-                          zIndex: 2,
-                        }}
-                        className="cat-delete-btn"
-                        title="Delete category"
-                      >
-                        {deletingCatId === cat.id ? '...' : '×'}
-                      </button>
-                    )}
-                    <span style={{ fontSize: 'var(--font-icon-sm)', lineHeight: 1, flexShrink: 0 }}>{cat.icon}</span>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', display: 'block', textAlign: 'center' }}>{cat.name}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
+      {/* Main Card */}
+      <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-xs flex flex-col gap-6">
         {error && (
-          <div
-            style={{
-              padding: '12px',
-              marginBottom: '16px',
-              borderRadius: '6px',
-              background: 'var(--danger-dim)',
-              border: '1px solid rgba(224, 85, 85, 0.2)',
-              color: 'var(--danger)',
-              fontSize: 'var(--font-small)',
-            }}
-          >
-            {error}
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">error</span>
+            <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div
-            style={{
-              padding: '12px',
-              marginBottom: '16px',
-              borderRadius: '6px',
-              background: 'var(--success-dim)',
-              border: '1px solid rgba(92, 184, 122, 0.2)',
-              color: 'var(--success)',
-              fontSize: 'var(--font-small)',
-            }}
-          >
-            Expense added successfully!
+          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">check_circle</span>
+            <span>Expense recorded successfully!</span>
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={loading || isAddingCategory}
-          style={{
-            width: '100%',
-            padding: '13px',
-            borderRadius: '4px',
-            border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-            background: loading ? 'var(--accent-dim)' : 'var(--accent)',
-            color: loading ? 'var(--accent)' : '#0d0d0f',
-            fontFamily: "'DM Mono', monospace",
-            fontWeight: 600,
-            fontSize: 'var(--font-body)',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            transition: 'background 0.2s',
-          }}
-        >
-          Add Expense
-        </button>
-      </form>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          {/* Amount Input */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="amount" className="text-xs font-medium text-zinc-700">
+              Amount (IDR)
+            </label>
+            <div className="relative flex items-center">
+              <span className="absolute left-3.5 font-mono font-semibold text-base text-zinc-400 pointer-events-none">
+                Rp
+              </span>
+              <input
+                id="amount"
+                type="number"
+                inputMode="numeric"
+                placeholder="0"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                className="w-full pl-12 pr-4 py-3 rounded-lg border border-zinc-200 bg-white text-zinc-900 placeholder-zinc-400 font-mono text-xl font-bold focus:outline-none focus:border-zinc-500 transition-colors"
+                required
+              />
+            </div>
+          </div>
+
+          {/* Date & Note Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="date" className="text-xs font-medium text-zinc-700">
+                Date
+              </label>
+              <input
+                id="date"
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-900 text-xs font-mono focus:outline-none focus:border-zinc-500 transition-colors"
+                required
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="title" className="text-xs font-medium text-zinc-700">
+                Description / Note
+              </label>
+              <input
+                id="title"
+                type="text"
+                placeholder="e.g., Groceries, Coffee..."
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-900 text-xs placeholder-zinc-400 focus:outline-none focus:border-zinc-500 transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Category Selector */}
+          <div className="flex flex-col gap-2.5 pt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-zinc-700">
+                Category
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsAddingCategory(!isAddingCategory)}
+                className="text-xs text-zinc-500 hover:text-zinc-900 font-medium transition-colors"
+              >
+                {isAddingCategory ? 'Cancel' : '+ New Category'}
+              </button>
+            </div>
+
+            {/* Add Custom Category Drawer */}
+            {isAddingCategory && (
+              <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 flex flex-col gap-2.5">
+                <div className="flex items-center gap-2">
+                  <EmojiPicker
+                    selectedEmoji={newCat.icon}
+                    onSelectEmoji={(emoji) => setNewCat({ ...newCat, icon: emoji })}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Category name..."
+                    value={newCat.name}
+                    onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
+                    className="flex-1 px-3 py-2 rounded-lg bg-white border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:border-zinc-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCategory}
+                    disabled={addingCatLoading || !newCat.name.trim()}
+                    className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition-colors disabled:opacity-50"
+                  >
+                    {addingCatLoading ? '...' : 'Add'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Category Chips List */}
+            <div className="flex flex-wrap gap-2">
+              {categories.map((cat) => {
+                const isSelected = form.category === cat.name;
+                return (
+                  <div
+                    key={cat.id}
+                    onClick={() => setForm({ ...form, category: cat.name })}
+                    className={`group cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors select-none ${
+                      isSelected
+                        ? 'bg-zinc-900 border-zinc-900 text-white shadow-xs'
+                        : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50'
+                    }`}
+                  >
+                    <span className="text-sm">{cat.icon}</span>
+                    <span>{cat.name}</span>
+
+                    {/* Delete Chip */}
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteCategory(e, cat.id, cat.name)}
+                      disabled={deletingCatId === cat.id}
+                      className={`opacity-0 group-hover:opacity-100 hover:text-rose-500 transition-opacity p-0.5 ${
+                        isSelected ? 'text-zinc-400 hover:text-white' : 'text-zinc-400'
+                      }`}
+                      title="Delete category"
+                    >
+                      <span className="material-symbols-outlined text-xs">close</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Submit CTA */}
+          <div className="pt-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold uppercase tracking-wider btn-press disabled:opacity-50 transition-colors"
+            >
+              {loading ? 'Saving...' : 'Record Expense'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 'var(--font-xxs)',
-  fontFamily: "'DM Mono', monospace",
-  color: 'var(--text-secondary)',
-  marginBottom: '6px',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '10px 12px',
-  borderRadius: '4px',
-  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)',
-  background: 'var(--bg-elevated)',
-  color: 'var(--text-primary)',
-  outline: 'none',
-  fontSize: 'var(--font-body)',
-};

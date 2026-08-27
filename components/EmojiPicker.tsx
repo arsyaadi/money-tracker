@@ -1,31 +1,33 @@
 'use client';
 
 interface EmojiPickerProps {
-  value: string;
-  onChange: (emoji: string) => void;
+  value?: string;
+  onChange?: (emoji: string) => void;
+  selectedEmoji?: string;
+  onSelectEmoji?: (emoji: string) => void;
 }
 
-export function EmojiPicker({ value, onChange }: EmojiPickerProps) {
+export function EmojiPicker({
+  value,
+  onChange,
+  selectedEmoji,
+  onSelectEmoji,
+}: EmojiPickerProps) {
+  const currentEmoji = selectedEmoji !== undefined ? selectedEmoji : value || '💰';
+  const handleEmojiChange = (emoji: string) => {
+    onChange?.(emoji);
+    onSelectEmoji?.(emoji);
+  };
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div className="flex items-center gap-2">
       <input
         type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        value={currentEmoji}
+        onChange={(e) => handleEmojiChange(e.target.value)}
         placeholder="💰"
         maxLength={4}
-        style={{
-          width: '60px',
-          padding: '10px',
-          textAlign: 'center',
-          fontSize: '1.25rem',
-          borderRadius: '4px',
-          border: '3px solid var(--border)',
-          boxShadow: 'var(--brutal-shadow)',
-          background: 'var(--bg-elevated)',
-          color: 'var(--text-primary)',
-          outline: 'none',
-        }}
+        className="w-11 h-10 text-center text-base rounded-lg border border-zinc-200 bg-white text-zinc-900 focus:outline-none focus:border-zinc-400 transition-colors"
       />
     </div>
   );

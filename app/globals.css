@@ -1,221 +1,67 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
-
 @import "tailwindcss";
 
-:root {
-  --bg: #FFDBFD;
-  --bg-card: #ffffff;
-  --bg-elevated: #ffffff;
-  --border: #000000;
-  --border-hover: #000000;
-  --text-primary: #000000;
-  --text-secondary: #222222;
-  --text-muted: #444444;
-  --accent: #FF88BA;
-  --accent-dim: #ffc2df;
-  --accent-hover: #ff6ea8;
-  --danger: #ff4d4d;
-  --danger-dim: #ffb3b3;
-  --success: #4ade80;
-  --success-dim: #bbf7d0;
+@theme {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-label: 'Geist', sans-serif;
 
-  --cat-food: #f97316;
-  --cat-transport: #3b82f6;
-  --cat-entertainment: #8b5cf6;
-  --cat-health: #4ade80;
-  --cat-shopping: #ec4899;
-  --cat-bills: #eab308;
-  --cat-other: #6b7280;
+  /* Bright Minimalist Palette */
+  --color-canvas: #fafaf9;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f4f4f5;
 
-  --brutal-shadow: 4px 4px 0px 0px #000000;
-  --brutal-shadow-sm: 2px 2px 0px 0px #000000;
-  --brutal-border: 3px solid #000000;
+  --color-border: #e4e4e7;
+  --color-border-subtle: #f1f1f4;
 
-  --font-hero: 36px;
-  --font-title: 20px;
-  --font-card-title: 18px;
-  --font-body: 14px;
-  --font-small: 13px;
-  --font-xs: 12px;
-  --font-xxs: 11px;
-  --font-value: 16px;
-  --font-value-lg: 24px;
-  --font-icon: 48px;
-  --font-icon-sm: 18px;
+  --color-text-primary: #09090b;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #71717a;
+
+  --color-income: #16a34a;
+  --color-expense: #e11d48;
+  --color-asset: #2563eb;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  background: var(--bg);
-  color: var(--text-primary);
-  font-family: 'DM Sans', sans-serif;
+body {
+  background-color: #fafaf9;
+  color: #09090b;
+  font-family: var(--font-sans);
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  min-height: 100vh;
-  background: var(--bg);
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-}
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: var(--border-hover);
-  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 9999px;
 }
 
-.cat-container:hover .cat-delete-btn { opacity: 1 !important; }
-
-.stats-header {
-  font-size: var(--font-xxs);
-  color: var(--text-muted);
-  margin-bottom: 8px;
-  font-family: 'DM Mono', monospace;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  text-align: center;
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.22);
 }
 
-.stats-container {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  width: 100%;
-  justify-content: space-between;
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 350, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+  line-height: 1;
 }
 
-.stat-item {
-  flex: 1;
-  text-align: center;
-  min-width: 0;
-  overflow: hidden;
+/* Tactile micro button press */
+.btn-press {
+  transition: transform 0.15s ease, opacity 0.15s ease, background-color 0.15s ease;
 }
 
-.stat-label {
-  font-size: var(--font-xxs);
-  font-family: 'DM Mono', monospace;
-  color: var(--text-muted);
-  margin-bottom: 4px;
-  letter-spacing: 0.04em;
+.btn-press:active {
+  transform: scale(0.985);
 }
-
-.stat-value {
-  font-family: 'DM Serif Display', serif;
-  font-size: var(--font-value);
-}
-
-.stat-label-short { display: none; }
-.stat-label-full { display: inline; }
-
-.tabs-container {
-  display: flex;
-  gap: 4px;
-  background: var(--bg-card);
-  border: 3px solid var(--border);
-  box-shadow: var(--brutal-shadow);
-  border-radius: 4px;
-  padding: 4px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.tabs-container button {
-  font-size: var(--font-small);
-}
-
-.mobile-bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  background: var(--bg-card);
-  border-top: 3px solid var(--border);
-  padding: 8px 0;
-  padding-bottom: calc(8px + env(safe-area-inset-bottom));
-  z-index: 100;
-}
-
-.mobile-nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  flex: 1;
-  min-width: 0;
-}
-
-.mobile-nav-item .nav-icon {
-  font-size: 18px;
-  margin-bottom: 2px;
-}
-
-.mobile-nav-item .nav-label {
-  font-size: 10px;
-  font-family: 'DM Mono', monospace;
-  font-weight: 500;
-}
-
-.mobile-nav-item.active {
-  transform: scale(1.05);
-}
-
-@media (max-width: 480px) {
-  :root {
-    --font-hero: 28px;
-    --font-title: 18px;
-    --font-card-title: 16px;
-    --font-body: 13px;
-    --font-small: 12px;
-    --font-xs: 11px;
-    --font-xxs: 10px;
-    --font-value: 13px;
-    --font-value-lg: 20px;
-    --font-icon: 36px;
-    --font-icon-sm: 16px;
-  }
-
-  .stats-header { font-size: 10px; }
-  .stats-container { gap: 4px; }
-  .stat-label { font-size: 9px; }
-  .stat-value { font-size: 11px; }
-  .stat-label-short { display: inline; }
-  .stat-label-full { display: none; }
-
-  .tabs-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px;
-    width: 100%;
-  }
-
-  .tabs-container button {
-    width: 100%;
-    font-size: 14px;
-  }
-
-  .mobile-nav-item .nav-icon {
-    font-size: 16px;
-  }
-
-  .mobile-nav-item .nav-label {
-    font-size: 9px;
-  }
-}
-

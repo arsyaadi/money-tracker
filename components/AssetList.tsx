@@ -10,289 +10,184 @@ interface AssetListProps {
   onEdit: (asset: Asset) => void;
 }
 
+function formatAmount(amount: number): string {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(amount);
+}
+
 export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
-  const [showTotal, setShowTotal] = useState(false);
+  const [assetToDelete, setAssetToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [showValuations, setShowValuations] = useState<boolean>(true);
 
-  const handleDeleteClick = (asset: Asset) => {
-    setAssetToDelete(asset);
+  const totalAssets = assets.reduce((sum, a) => sum + a.amount, 0);
+
+  const triggerDelete = (id: string, name: string) => {
+    setAssetToDelete({ id, name: name || 'this asset' });
   };
 
   const confirmDelete = async () => {
     if (!assetToDelete) return;
-    
+    const { id } = assetToDelete;
+
     setAssetToDelete(null);
-    setDeletingId(assetToDelete.id);
-    
+    setDeletingId(id);
     try {
-      await deleteAsset(assetToDelete.id);
-      onDelete(assetToDelete.id);
+      await deleteAsset(id);
+      onDelete(id);
     } catch (err) {
-      console.error('Failed to delete asset:', err);
+      console.error(err);
+      alert('Failed to delete asset');
     } finally {
       setDeletingId(null);
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  if (assets.length === 0) {
-    return (
-      <div
-        style={{
-          textAlign: 'center',
-          padding: '40px 20px',
-          color: 'var(--text-secondary)',
-          fontSize: 'var(--font-body)',
-        }}
-      >
-        <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>💼</div>
-        <p>No assets yet. Add your first investment or valuable!</p>
-      </div>
-    );
-  }
-
-  const totalValue = assets.reduce((sum, asset) => sum + asset.amount, 0);
-
   return (
-    <>
+    <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-6">
+      {/* Delete Confirmation Modal */}
       {assetToDelete && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)'
-        }}>
-          <div style={{
-            background: 'var(--bg-card)', padding: '32px', borderRadius: '4px', width: '90%', maxWidth: '400px',
-            border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow)'
-          }}>
-            <h2 style={{ marginBottom: '16px', fontSize: 'var(--font-title)', fontFamily: "'DM Serif Display', serif", color: 'var(--text-primary)' }}>
-              Delete Asset?
-            </h2>
-            <p style={{ marginBottom: '24px', fontSize: 'var(--font-body)', color: 'var(--text-secondary)' }}>
-              Are you sure you want to delete <strong>{assetToDelete.icon} {assetToDelete.name}</strong>? This action cannot be undone.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl border border-zinc-200 p-6 max-w-sm w-full shadow-lg flex flex-col gap-4">
+            <div className="flex items-center gap-2 text-rose-600">
+              <span className="material-symbols-outlined text-xl">warning</span>
+              <h3 className="font-semibold text-base text-zinc-900">Remove Holding?</h3>
+            </div>
+            <p className="text-xs text-zinc-600">
+              Are you sure you want to remove <strong>{assetToDelete.name}</strong> from your portfolio?
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <div className="flex justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => setAssetToDelete(null)}
-                style={{
-                  padding: '10px 20px', background: 'var(--bg-elevated)', color: 'var(--text-primary)',
-                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow-sm)', borderRadius: '4px', cursor: 'pointer', fontFamily: "'DM Mono', monospace", fontWeight: 600
-                }}
+                className="px-4 py-2 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 btn-press"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={confirmDelete}
-                style={{
-                  padding: '10px 20px', background: 'var(--danger)', color: '#fff',
-                  border: '3px solid var(--border)', boxShadow: 'var(--brutal-shadow-sm)', borderRadius: '4px', cursor: 'pointer', fontFamily: "'DM Mono', monospace", fontWeight: 600
-                }}
+                className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold btn-press"
               >
-                Delete
+                Remove
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {deletingId && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(255,219,253,0.7)', backdropFilter: 'blur(8px)', gap: '16px', color: 'var(--text-primary)'
-        }}>
-          <div style={{ position: 'relative', width: '44px', height: '44px' }}>
-            <div style={{
-              position: 'absolute', inset: 0,
-              border: '4px solid var(--border)',
-              borderRadius: '50%',
-              boxShadow: 'var(--brutal-shadow)',
-              background: 'var(--bg-elevated)',
-            }} />
-            <div style={{
-              position: 'absolute', inset: 0,
-              border: '4px solid transparent',
-              borderTopColor: 'var(--danger)',
-              borderRadius: '50%',
-              animation: 'spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite',
-              zIndex: 1,
-            }} />
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          </div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: 'var(--font-body)', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
-            DELETING ASSET...
-          </div>
-        </div>
-      )}
-
-      <div
-        style={{
-          background: 'var(--bg-card)',
-          border: '3px solid var(--border)',
-          boxShadow: 'var(--brutal-shadow)',
-          borderRadius: '4px',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            padding: '16px 20px',
-            borderBottom: '3px solid var(--border)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            background: 'var(--bg-elevated)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 'var(--font-small)', color: 'var(--text-secondary)' }}>
-              Total:
+      {/* Hero Portfolio Valuation Banner */}
+      <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+              Portfolio Valuation
             </span>
-            <strong style={{ color: '#3b82f6', fontFamily: "'DM Mono', monospace" }}>
-              {showTotal ? formatCurrency(totalValue) : 'Rp ••••••••'}
-            </strong>
+            <button
+              type="button"
+              onClick={() => setShowValuations(!showValuations)}
+              className="p-1 rounded text-zinc-400 hover:text-zinc-700 transition-colors"
+              title={showValuations ? 'Hide figures' : 'Show figures'}
+            >
+              <span className="material-symbols-outlined text-sm">
+                {showValuations ? 'visibility' : 'visibility_off'}
+              </span>
+            </button>
           </div>
-          <button
-            onClick={() => setShowTotal(!showTotal)}
-            style={{
-              background: 'none',
-              border: '2px solid var(--border)',
-              borderRadius: '4px',
-              padding: '4px',
-              cursor: 'pointer',
-              color: 'var(--text-muted)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            title={showTotal ? 'Hide values' : 'Show values'}
-          >
-            {showTotal ? (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                <line x1="1" y1="1" x2="23" y2="23" />
-              </svg>
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            )}
-          </button>
+
+          <div className="text-2xl sm:text-4xl font-mono font-bold text-zinc-900 tabular-nums">
+            {showValuations ? formatAmount(totalAssets) : '••••••••••••'}
+          </div>
+          <p className="text-xs text-zinc-500 mt-1 font-sans">
+            Cumulative across {assets.length} active holdings and accounts.
+          </p>
         </div>
 
-        {assets.map((asset) => (
-          <div
-            key={asset.id}
-            style={{
-              padding: '14px 16px',
-              borderBottom: '3px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              transition: 'background 0.1s ease',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-elevated)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLDivElement).style.background = 'transparent';
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', fontSize: 'var(--font-body)', minWidth: 0 }}>
-                <span style={{ fontSize: 'var(--font-icon-sm)' }}>{asset.icon}</span>
-                <span style={{ fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
-                  {asset.name}
-                </span>
-              </div>
-              <div style={{ fontSize: 'var(--font-xxs)', color: 'var(--text-muted)', fontFamily: "'DM Mono', monospace" }}>
-                {formatDate(asset.updatedAt)}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <span
-                style={{
-                  fontFamily: "'DM Mono', monospace",
-                  fontSize: 'var(--font-body)',
-                  color: '#3b82f6',
-                  fontWeight: 600,
-                  letterSpacing: '-0.02em',
-                }}
-              >
-                {showTotal ? formatCurrency(asset.amount) : 'Rp ••••••••'}
-              </span>
-
-              <button
-                onClick={() => onEdit(asset)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--text-muted)',
-                  fontSize: 'var(--font-body)',
-                  padding: '4px',
-                  lineHeight: 1,
-                  transition: 'color 0.15s ease',
-                  flexShrink: 0,
-                }}
-                onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLButtonElement).style.color = '#3b82f6')
-                }
-                onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)')
-                }
-                title="Edit asset"
-              >
-                ✏️
-              </button>
-
-              <button
-                onClick={() => handleDeleteClick(asset)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--text-muted)',
-                  fontSize: 'var(--font-body)',
-                  padding: '4px',
-                  lineHeight: 1,
-                  transition: 'color 0.15s ease',
-                  flexShrink: 0,
-                }}
-                onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLButtonElement).style.color = 'var(--danger)')
-                }
-                onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLButtonElement).style.color = 'var(--text-muted)')
-                }
-                title="Delete asset"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        ))}
+        <div className="px-4 py-2.5 rounded-lg bg-zinc-50 border border-zinc-200">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 block">
+            Total Holdings
+          </span>
+          <span className="font-mono text-base font-bold text-zinc-900">
+            {assets.length} Positions
+          </span>
+        </div>
       </div>
-    </>
+
+      {/* Asset Holdings Table */}
+      <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-xs">
+        <div className="px-6 py-3.5 border-b border-zinc-200 bg-zinc-50/70 flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-700">
+            Holdings Breakdown
+          </h3>
+          <span className="text-xs font-mono text-zinc-500">
+            Allocation Share
+          </span>
+        </div>
+
+        {assets.length === 0 ? (
+          <div className="p-12 text-center text-xs text-zinc-400 flex flex-col items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-3xl text-zinc-300">account_balance</span>
+            <p>No holdings recorded yet.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-zinc-100">
+            {assets.map((asset) => {
+              const sharePercent = totalAssets > 0 ? (asset.amount / totalAssets) * 100 : 0;
+              return (
+                <div
+                  key={asset.id}
+                  className="p-4 sm:px-6 flex items-center justify-between gap-4 hover:bg-zinc-50/80 transition-colors"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-base shrink-0">
+                      {asset.icon || '💰'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-zinc-900 truncate">
+                        {asset.name}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[11px] font-medium text-zinc-500 font-mono">
+                          {sharePercent.toFixed(1)}% of total
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="font-mono text-sm sm:text-base font-bold text-zinc-900 tabular-nums">
+                      {showValuations ? formatAmount(asset.amount) : '••••••'}
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onEdit(asset)}
+                        className="p-1.5 rounded text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-colors"
+                        title="Edit holding"
+                      >
+                        <span className="material-symbols-outlined text-base">edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => triggerDelete(asset.id, asset.name)}
+                        disabled={deletingId === asset.id}
+                        className="p-1.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-zinc-100 transition-colors"
+                        title="Remove holding"
+                      >
+                        <span className="material-symbols-outlined text-base">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

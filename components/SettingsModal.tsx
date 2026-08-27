@@ -19,7 +19,12 @@ interface SettingsModalProps {
   onRefresh?: () => void;
 }
 
-export function SettingsModal({ isOpen, onClose, onDeploymentIdSave, onRefresh }: SettingsModalProps) {
+export function SettingsModal({
+  isOpen,
+  onClose,
+  onDeploymentIdSave,
+  onRefresh,
+}: SettingsModalProps) {
   const [deploymentId, setDeploymentId] = useState(() => {
     if (typeof window === 'undefined') return '';
     return localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID') || '';
@@ -37,7 +42,7 @@ export function SettingsModal({ isOpen, onClose, onDeploymentIdSave, onRefresh }
     if (!settings.enabled) {
       const permission = await requestPermission();
       setPermissionStatus(permission);
-      
+
       if (permission === 'granted') {
         const newSettings = { ...settings, enabled: true };
         setSettings(newSettings);
@@ -75,248 +80,129 @@ export function SettingsModal({ isOpen, onClose, onDeploymentIdSave, onRefresh }
   const isBlocked = permissionStatus === 'denied';
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(0,0,0,0.5)',
-        backdropFilter: 'blur(4px)',
-      }}
-    >
-      <div
-        style={{
-          background: 'var(--bg-card)',
-          padding: '32px',
-          borderRadius: '4px',
-          width: '90%',
-          maxWidth: '400px',
-          border: '3px solid var(--border)',
-          boxShadow: 'var(--brutal-shadow)',
-        }}
-      >
-        <h2
-          style={{
-            marginBottom: '24px',
-            fontSize: 'var(--font-title)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          ⚙️ Settings
-        </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+      <div className="bg-white rounded-xl border border-zinc-200 p-6 sm:p-7 max-w-md w-full shadow-lg flex flex-col gap-5">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-zinc-700 text-xl">tune</span>
+            <h2 className="text-base font-bold text-zinc-900">Settings</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded text-zinc-400 hover:text-zinc-700 transition-colors"
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
 
+        {/* Sync & Refresh Action Button */}
         {onRefresh && (
           <button
+            type="button"
             onClick={() => {
               onRefresh();
               onClose();
             }}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              marginBottom: '16px',
-              background: 'var(--bg)',
-              border: '3px solid var(--border)',
-              borderRadius: '4px',
-              boxShadow: 'var(--brutal-shadow)',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: 'var(--font-body)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-            }}
+            className="w-full py-2.5 px-4 rounded-lg bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-xs font-semibold uppercase tracking-wider text-zinc-800 flex items-center justify-center gap-2 btn-press transition-colors"
           >
-            ↻ Refresh Data
+            <span className="material-symbols-outlined text-base text-zinc-600">sync</span>
+            <span>Sync Cloud Database</span>
           </button>
         )}
 
-        <div
-          style={{
-            padding: '16px',
-            border: '3px solid var(--border)',
-            borderRadius: '4px',
-            marginBottom: '16px',
-            background: 'var(--bg)',
-          }}
-        >
+        {/* Google Apps Script Deployment Section */}
+        <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 flex flex-col gap-2">
           <label
-            style={{
-              display: 'block',
-              fontSize: 'var(--font-xxs)',
-              color: 'var(--text-secondary)',
-              marginBottom: '8px',
-              fontFamily: "'DM Mono', monospace",
-            }}
+            htmlFor="deployment-id"
+            className="text-[11px] font-semibold uppercase tracking-wider text-zinc-700 flex items-center gap-1.5"
           >
-            Deployment ID
+            <span className="material-symbols-outlined text-xs">cloud_sync</span>
+            <span>Google Apps Script Deployment ID</span>
           </label>
           <input
+            id="deployment-id"
             type="text"
             value={deploymentId}
             onChange={(e) => setDeploymentId(e.target.value)}
             placeholder="AKfycbx..."
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: '4px',
-              border: '3px solid var(--border)',
-              boxShadow: 'var(--brutal-shadow)',
-              background: 'var(--bg)',
-              color: 'var(--text-primary)',
-              fontFamily: "'DM Mono', monospace",
-            }}
+            className="w-full bg-white border border-zinc-200 px-3 py-2 text-xs font-mono rounded-lg text-zinc-900 focus:outline-none focus:border-zinc-400"
           />
+          <p className="text-[11px] text-zinc-500 font-sans">
+            Syncs transactions directly to your private Google Sheet.
+          </p>
         </div>
 
-        <div
-          style={{
-            padding: '16px',
-            border: '3px solid var(--border)',
-            borderRadius: '4px',
-            marginBottom: '20px',
-            background: 'var(--bg)',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '12px',
-            }}
-          >
+        {/* Notification Reminder Section */}
+        <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
             <div>
-              <div style={{ fontWeight: 600, marginBottom: '4px' }}>
-                Daily Reminder
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-700 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-xs">notifications</span>
+                <span>Daily Reminder</span>
               </div>
-              <div
-                style={{
-                  fontSize: 'var(--font-small)',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                Get notified to track expenses
-              </div>
+              <p className="text-[11px] text-zinc-500 mt-0.5">
+                Push notification to log daily transactions
+              </p>
             </div>
+
             <button
+              type="button"
               onClick={handleToggle}
               disabled={isBlocked}
-              style={{
-                width: '52px',
-                height: '28px',
-                borderRadius: '14px',
-                border: settings.enabled ? 'none' : '3px solid var(--border)',
-                background: settings.enabled ? '#22c55e' : 'var(--bg)',
-                cursor: isBlocked ? 'not-allowed' : 'pointer',
-                position: 'relative',
-                transition: 'all 0.2s',
-                opacity: isBlocked ? 0.5 : 1,
-              }}
+              className={`w-11 h-6 rounded-full transition-colors relative ${
+                settings.enabled ? 'bg-zinc-900' : 'bg-zinc-200'
+              }`}
             >
               <div
-                style={{
-                  width: '20px',
-                  height: '20px',
-                  borderRadius: '50%',
-                  background: '#fff',
-                  border: '2px solid var(--border)',
-                  position: 'absolute',
-                  top: '2px',
-                  left: settings.enabled ? '28px' : '2px',
-                  transition: 'left 0.2s',
-                }}
+                className={`w-5 h-5 rounded-full bg-white shadow-xs transition-all absolute top-0.5 ${
+                  settings.enabled ? 'left-5.5' : 'left-0.5'
+                }`}
               />
             </button>
           </div>
 
           {isBlocked && (
-            <div
-              style={{
-                fontSize: 'var(--font-xs)',
-                color: 'var(--danger)',
-                marginTop: '8px',
-                padding: '8px',
-                background: 'var(--danger-dim)',
-                borderRadius: '4px',
-              }}
-            >
-              Notifications are blocked. Please enable them in your browser settings.
+            <div className="p-2 bg-rose-50 text-rose-700 border border-rose-200 text-[11px] rounded-lg">
+              Notifications are blocked in your browser settings.
             </div>
           )}
 
           {settings.enabled && !isBlocked && (
-            <div style={{ marginTop: '16px' }}>
+            <div className="flex items-center justify-between pt-2 border-t border-zinc-200">
               <label
-                style={{
-                  display: 'block',
-                  fontSize: 'var(--font-xxs)',
-                  color: 'var(--text-secondary)',
-                  marginBottom: '6px',
-                  fontFamily: "'DM Mono', monospace",
-                }}
+                htmlFor="reminder-time"
+                className="text-xs font-medium text-zinc-600"
               >
                 Reminder Time
               </label>
               <input
+                id="reminder-time"
                 type="time"
                 value={settings.reminderTime}
                 onChange={(e) => handleTimeChange(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '4px',
-                  border: '3px solid var(--border)',
-                  boxShadow: 'var(--brutal-shadow)',
-                  background: 'var(--bg)',
-                  color: 'var(--text-primary)',
-                  fontFamily: "'DM Mono', monospace",
-                }}
+                className="bg-white border border-zinc-200 px-2.5 py-1 text-xs font-mono rounded-md text-zinc-900 focus:outline-none focus:border-zinc-400"
               />
             </div>
           )}
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '12px',
-          }}
-        >
+        {/* Actions */}
+        <div className="flex justify-end gap-2 pt-2">
           <button
+            type="button"
             onClick={onClose}
-            style={{
-              padding: '10px 20px',
-              background: 'transparent',
-              color: 'var(--text-secondary)',
-              border: '3px solid var(--border)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 500,
-            }}
+            className="px-4 py-2 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-700 hover:bg-zinc-50 btn-press"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={handleSave}
-            style={{
-              padding: '10px 20px',
-              background: 'var(--accent)',
-              color: '#000',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 500,
-            }}
+            className="px-5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs uppercase tracking-wider btn-press"
           >
-            Save
+            Save Settings
           </button>
         </div>
       </div>

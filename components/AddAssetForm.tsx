@@ -29,41 +29,58 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
     if (editingAsset) {
       setForm({
         name: editingAsset.name,
-        amount: editingAsset.amount.toString(),
-        icon: editingAsset.icon,
+        amount: String(editingAsset.amount),
+        icon: editingAsset.icon || '💰',
       });
     } else {
-      setForm({ name: '', amount: '', icon: '💰' });
+      setForm({
+        name: '',
+        amount: '',
+        icon: '💰',
+      });
     }
   }, [editingAsset]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.name.trim()) {
+      setError('Please enter asset holding name');
+      return;
+    }
+    if (!form.amount || Number(form.amount) < 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+
     setLoading(true);
     setError('');
     setSuccess(false);
 
     try {
-      if (isEditing && editingAsset && onUpdate) {
+      if (isEditing && editingAsset) {
         const updated = await updateAsset({
           id: editingAsset.id,
-          name: form.name,
+          name: form.name.trim(),
           amount: Number(form.amount),
           icon: form.icon,
         });
-        onUpdate(updated);
+        onUpdate?.(updated);
       } else {
         const created = await addAsset({
-          name: form.name,
+          name: form.name.trim(),
           amount: Number(form.amount),
           icon: form.icon,
         });
         onAdd(created);
-        setForm({ name: '', amount: '', icon: '💰' });
       }
 
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 2500);
+      setForm({
+        name: '',
+        amount: '',
+        icon: '💰',
+      });
+      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -71,203 +88,97 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
     }
   };
 
-  const handleCancel = () => {
-    setForm({ name: '', amount: '', icon: '💰' });
-    if (onCancelEdit) onCancelEdit();
-  };
-
   return (
-    <div
-      style={{
-        background: 'var(--bg-card)',
-        border: '3px solid var(--border)',
-        boxShadow: 'var(--brutal-shadow)',
-        borderRadius: '4px',
-        padding: '24px 16px',
-        maxWidth: '460px',
-        margin: '0 auto',
-      }}
-    >
-      {loading && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(255,219,253,0.7)', backdropFilter: 'blur(8px)', gap: '16px', color: 'var(--text-primary)'
-        }}>
-          <div style={{ position: 'relative', width: '44px', height: '44px' }}>
-            <div style={{
-              position: 'absolute', inset: 0,
-              border: '4px solid var(--border)',
-              borderRadius: '50%',
-              boxShadow: 'var(--brutal-shadow)',
-              background: 'var(--bg-elevated)',
-            }} />
-            <div style={{
-              position: 'absolute', inset: 0,
-              border: '4px solid transparent',
-              borderTopColor: '#3b82f6',
-              borderRadius: '50%',
-              animation: 'spin 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite',
-              zIndex: 1,
-            }} />
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          </div>
-          <div style={{ fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: 'var(--font-body)', letterSpacing: '0.05em', background: 'var(--bg-card)', padding: '6px 16px', border: '3px solid var(--border)', borderRadius: '4px', boxShadow: 'var(--brutal-shadow)' }}>
-            {isEditing ? 'UPDATING ASSET...' : 'ADDING ASSET...'}
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginBottom: '24px' }}>
-        <h2
-          style={{
-            fontFamily: "'DM Serif Display', serif",
-            fontSize: 'var(--font-value-lg)',
-            marginBottom: '4px',
-            color: 'var(--text-primary)',
-          }}
-        >
-          {isEditing ? 'Edit Asset' : 'Add Asset'}
-        </h2>
-        <p style={{ fontSize: 'var(--font-small)', color: 'var(--text-secondary)' }}>
-          Track your investments and valuables
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '16px' }}>
-          <label style={labelStyle}>Name</label>
-          <input
-            type="text"
-            required
-            placeholder="e.g. Gold Ring, Apple Stock, SBI Mutual Fund"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            style={inputStyle}
-          />
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={labelStyle}>Amount (IDR)</label>
-          <input
-            type="number"
-            required
-            step="any"
-            placeholder="Current value"
-            value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            style={{
-              ...inputStyle,
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 'var(--font-value)',
-            }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '24px' }}>
-          <label style={labelStyle}>Icon</label>
-          <EmojiPicker
-            value={form.icon}
-            onChange={(emoji) => setForm({ ...form, icon: emoji })}
-          />
-        </div>
-
-        {error && (
-          <div
-            style={{
-              padding: '12px',
-              marginBottom: '16px',
-              borderRadius: '6px',
-              background: 'var(--danger-dim)',
-              border: '1px solid rgba(224, 85, 85, 0.2)',
-              color: 'var(--danger)',
-              fontSize: 'var(--font-small)',
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div
-            style={{
-              padding: '12px',
-              marginBottom: '16px',
-              borderRadius: '6px',
-              background: 'var(--success-dim)',
-              border: '1px solid rgba(92, 184, 122, 0.2)',
-              color: 'var(--success)',
-              fontSize: 'var(--font-small)',
-            }}
-          >
-            Asset {isEditing ? 'updated' : 'added'} successfully!
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: '12px' }}>
+    <div className="w-full max-w-[620px] mx-auto flex flex-col gap-6">
+      {/* Main Card */}
+      <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-xs flex flex-col gap-5">
+        <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+          <h2 className="text-sm font-bold text-zinc-900 uppercase tracking-wider">
+            {isEditing ? 'Edit Asset Holding' : 'Add Asset Holding'}
+          </h2>
           {isEditing && (
             <button
               type="button"
-              onClick={handleCancel}
-              style={{
-                flex: 1,
-                padding: '13px',
-                borderRadius: '4px',
-                border: '3px solid var(--border)',
-                boxShadow: 'var(--brutal-shadow)',
-                background: 'var(--bg-elevated)',
-                color: 'var(--text-primary)',
-                fontFamily: "'DM Mono', monospace",
-                fontWeight: 600,
-                fontSize: 'var(--font-body)',
-                cursor: 'pointer',
-              }}
+              onClick={onCancelEdit}
+              className="text-xs text-zinc-500 hover:text-zinc-900 font-medium"
             >
               Cancel
             </button>
           )}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              flex: 1,
-              padding: '13px',
-              borderRadius: '4px',
-              border: '3px solid var(--border)',
-              boxShadow: 'var(--brutal-shadow)',
-              background: loading ? '#3b82f644' : '#3b82f6',
-              color: '#fff',
-              fontFamily: "'DM Mono', monospace",
-              fontWeight: 600,
-              fontSize: 'var(--font-body)',
-              cursor: loading ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {isEditing ? 'Update Asset' : 'Add Asset'}
-          </button>
         </div>
-      </form>
+
+        {error && (
+          <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">error</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">check_circle</span>
+            <span>Asset holding saved!</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-3 items-center">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-zinc-700">Icon</label>
+              <EmojiPicker
+                selectedEmoji={form.icon}
+                onSelectEmoji={(emoji) => setForm({ ...form, icon: emoji })}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="asset-name" className="text-xs font-medium text-zinc-700">
+                Holding / Account Name
+              </label>
+              <input
+                id="asset-name"
+                type="text"
+                placeholder="e.g., Bank Account, Gold, Cash..."
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-900 text-xs focus:outline-none focus:border-zinc-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="asset-amount" className="text-xs font-medium text-zinc-700">
+              Valuation / Balance (IDR)
+            </label>
+            <div className="relative flex items-center">
+              <span className="absolute left-3.5 font-mono font-semibold text-sm text-zinc-400 pointer-events-none">
+                Rp
+              </span>
+              <input
+                id="asset-amount"
+                type="number"
+                inputMode="numeric"
+                placeholder="0"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                className="w-full pl-12 pr-4 py-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-900 font-mono text-base font-bold focus:outline-none focus:border-zinc-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold uppercase tracking-wider btn-press disabled:opacity-50 transition-colors"
+            >
+              {loading ? 'Saving...' : isEditing ? 'Update Holding' : 'Add Holding'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 'var(--font-xxs)',
-  fontFamily: "'DM Mono', monospace",
-  color: 'var(--text-secondary)',
-  marginBottom: '6px',
-  textTransform: 'uppercase',
-  letterSpacing: '0.04em',
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '10px 12px',
-  borderRadius: '4px',
-  border: '3px solid var(--border)',
-  boxShadow: 'var(--brutal-shadow)',
-  background: 'var(--bg-elevated)',
-  color: 'var(--text-primary)',
-  outline: 'none',
-  fontSize: 'var(--font-body)',
-};
