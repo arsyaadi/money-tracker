@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import { Asset } from '@/lib/types';
 import { addAsset, updateAsset } from '@/lib/apiClient';
-import { EmojiPicker } from './EmojiPicker';
 
 interface AddAssetFormProps {
   onAdd: (asset: Asset) => void;
@@ -16,7 +16,7 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
   const [form, setForm] = useState({
     name: '',
     amount: '',
-    icon: '💰',
+    icon: 'wallet',
   });
 
   const [loading, setLoading] = useState(false);
@@ -30,13 +30,13 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
       setForm({
         name: editingAsset.name,
         amount: String(editingAsset.amount),
-        icon: editingAsset.icon || '💰',
+        icon: editingAsset.icon || 'wallet',
       });
     } else {
       setForm({
         name: '',
         amount: '',
-        icon: '💰',
+        icon: 'wallet',
       });
     }
   }, [editingAsset]);
@@ -78,7 +78,7 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
       setForm({
         name: '',
         amount: '',
-        icon: '💰',
+        icon: 'wallet',
       });
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
@@ -109,42 +109,32 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
 
         {error && (
           <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-            <span className="material-symbols-outlined text-base">error</span>
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
           <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
-            <span className="material-symbols-outlined text-base">check_circle</span>
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>Asset holding saved!</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-3 items-center">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-zinc-700">Icon</label>
-              <EmojiPicker
-                selectedEmoji={form.icon}
-                onSelectEmoji={(emoji) => setForm({ ...form, icon: emoji })}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="asset-name" className="text-xs font-medium text-zinc-700">
-                Holding / Account Name
-              </label>
-              <input
-                id="asset-name"
-                type="text"
-                placeholder="e.g., Bank Account, Gold, Cash..."
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-900 text-xs focus:outline-none focus:border-zinc-500"
-                required
-              />
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="asset-name" className="text-xs font-medium text-zinc-700">
+              Holding / Account Name
+            </label>
+            <input
+              id="asset-name"
+              type="text"
+              placeholder="e.g., Bank BCA, Emergency Fund, Gold..."
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-900 text-xs focus:outline-none focus:border-zinc-500"
+              required
+            />
           </div>
 
           <div className="flex flex-col gap-1.5">

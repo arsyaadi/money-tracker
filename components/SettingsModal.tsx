@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Sliders, X, RefreshCw, Cloud, Bell, Lock, Key, ShieldCheck, Trash2 } from 'lucide-react';
 import { NotificationSettings } from '@/lib/types';
 import {
   getSettings,
@@ -11,12 +12,20 @@ import {
   stopReminderCheck,
   DEFAULT_SETTINGS,
 } from '@/lib/notifications';
+import {
+  isPinConfigured,
+  isPinEnabled,
+  setSecurityPin,
+  setPinEnabled,
+  removeSecurityPin,
+} from '@/lib/security';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDeploymentIdSave?: () => void;
   onRefresh?: () => void;
+  onPinConfigChange?: () => void;
 }
 
 export function SettingsModal({
@@ -24,8 +33,9 @@ export function SettingsModal({
   onClose,
   onDeploymentIdSave,
   onRefresh,
+  onPinConfigChange,
 }: SettingsModalProps) {
-  const [deploymentId, setDeploymentId] = useState(() => {
+  const [deploymentId, setDeploymentId] = useState<string>(() => {
     if (typeof window === 'undefined') return '';
     return localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID') || '';
   });
@@ -38,7 +48,16 @@ export function SettingsModal({
     return getPermissionStatus();
   });
 
-  const handleToggle = async () => {
+  // PIN settings state
+  const [pinEnabled, setPinEnabledState] = useState<boolean>(() => isPinEnabled());
+  const [hasConfiguredPin, setHasConfiguredPin] = useState<boolean>(() => isPinConfigured());
+  const [isChangingPin, setIsChangingPin] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pinSuccess, setPinSuccess] = useState('');
+
+  const handleToggleReminder = async () => {
     if (!settings.enabled) {
       const permission = await requestPermission();
       setPermissionStatus(permission);
@@ -63,6 +82,51 @@ export function SettingsModal({
     saveSettings(newSettings);
   };
 
+  const handleTogglePinProtection = () => {
+    if (!hasConfiguredPin) {
+      setIsChangingPin(true);
+      return;
+    }
+    const nextState = !pinEnabled;
+    setPinEnabledState(nextState);
+    setPinEnabled(nextState);
+    onPinConfigChange?.();
+  };
+
+  const handleSavePin = async () => {
+    setPinError('');
+    setPinSuccess('');
+
+    if (newPin.length < 4) {
+      setPinError('PIN must be at least 4 digits');
+      return;
+    }
+    if (newPin !== confirmPin) {
+      setPinError('PIN confirmation does not match');
+      return;
+    }
+
+    await setSecurityPin(newPin);
+    setHasConfiguredPin(true);
+    setPinEnabledState(true);
+    setIsChangingPin(false);
+    setNewPin('');
+    setConfirmPin('');
+    setPinSuccess('PIN configured and enabled!');
+    onPinConfigChange?.();
+    setTimeout(() => setPinSuccess(''), 3000);
+  };
+
+  const handleRemovePin = () => {
+    if (confirm('Are you sure you want to remove your Security PIN?')) {
+      removeSecurityPin();
+      setHasConfiguredPin(false);
+      setPinEnabledState(false);
+      setIsChangingPin(false);
+      onPinConfigChange?.();
+    }
+  };
+
   const handleSave = () => {
     if (deploymentId.trim()) {
       localStorage.setItem('APPS_SCRIPT_DEPLOYMENT_ID', deploymentId.trim());
@@ -81,11 +145,11 @@ export function SettingsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-xl border border-zinc-200 p-6 sm:p-7 max-w-md w-full shadow-lg flex flex-col gap-5">
+      <div className="bg-white rounded-xl border border-zinc-200 p-6 sm:p-7 max-w-md w-full shadow-lg flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-zinc-700 text-xl">tune</span>
+            <Sliders className="w-5 h-5 text-zinc-900" />
             <h2 className="text-base font-bold text-zinc-900">Settings</h2>
           </div>
           <button
@@ -93,7 +157,7 @@ export function SettingsModal({
             onClick={onClose}
             className="p-1 rounded text-zinc-400 hover:text-zinc-700 transition-colors"
           >
-            <span className="material-symbols-outlined text-lg">close</span>
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -107,7 +171,7 @@ export function SettingsModal({
             }}
             className="w-full py-2.5 px-4 rounded-lg bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 text-xs font-semibold uppercase tracking-wider text-zinc-800 flex items-center justify-center gap-2 btn-press transition-colors"
           >
-            <span className="material-symbols-outlined text-base text-zinc-600">sync</span>
+            <RefreshCw className="w-4 h-4 text-zinc-600" />
             <span>Sync Cloud Database</span>
           </button>
         )}
@@ -118,7 +182,7 @@ export function SettingsModal({
             htmlFor="deployment-id"
             className="text-[11px] font-semibold uppercase tracking-wider text-zinc-700 flex items-center gap-1.5"
           >
-            <span className="material-symbols-outlined text-xs">cloud_sync</span>
+            <Cloud className="w-3.5 h-3.5 text-zinc-600" />
             <span>Google Apps Script Deployment ID</span>
           </label>
           <input
@@ -130,8 +194,120 @@ export function SettingsModal({
             className="w-full bg-white border border-zinc-200 px-3 py-2 text-xs font-mono rounded-lg text-zinc-900 focus:outline-none focus:border-zinc-400"
           />
           <p className="text-[11px] text-zinc-500 font-sans">
-            Syncs transactions directly to your private Google Sheet.
+            Connects your ledger directly to your private Google Sheet.
           </p>
+        </div>
+
+        {/* Security & PIN Privacy Section */}
+        <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-700 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-zinc-600" />
+                <span>Stealth PIN Protection</span>
+              </div>
+              <p className="text-[11px] text-zinc-500 mt-0.5">
+                Require PIN to reveal hidden financial figures
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleTogglePinProtection}
+              className={`w-11 h-6 rounded-full transition-colors relative ${
+                pinEnabled ? 'bg-zinc-900' : 'bg-zinc-200'
+              }`}
+            >
+              <div
+                className={`w-5 h-5 rounded-full bg-white shadow-xs transition-all absolute top-0.5 ${
+                  pinEnabled ? 'left-5.5' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+
+          {pinSuccess && (
+            <div className="p-2 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] rounded-lg flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>{pinSuccess}</span>
+            </div>
+          )}
+
+          {/* Change PIN Controls */}
+          {hasConfiguredPin && !isChangingPin && (
+            <div className="flex items-center justify-between pt-2 border-t border-zinc-200">
+              <button
+                type="button"
+                onClick={() => setIsChangingPin(true)}
+                className="text-xs font-medium text-zinc-700 hover:text-zinc-900 flex items-center gap-1"
+              >
+                <Key className="w-3.5 h-3.5" />
+                <span>Change PIN</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleRemovePin}
+                className="text-xs font-medium text-rose-600 hover:text-rose-700 flex items-center gap-1"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Remove PIN</span>
+              </button>
+            </div>
+          )}
+
+          {/* PIN Setup / Edit Form */}
+          {isChangingPin && (
+            <div className="pt-2 border-t border-zinc-200 flex flex-col gap-2.5">
+              {pinError && (
+                <div className="p-2 bg-rose-50 text-rose-700 border border-rose-200 text-[11px] rounded-lg">
+                  {pinError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="New 4-6 digit PIN"
+                  value={newPin}
+                  onChange={(e) => setNewPin(e.target.value)}
+                  className="bg-white border border-zinc-200 px-3 py-1.5 text-xs font-mono rounded-lg text-zinc-900 focus:outline-none focus:border-zinc-400"
+                />
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="Confirm PIN"
+                  value={confirmPin}
+                  onChange={(e) => setConfirmPin(e.target.value)}
+                  className="bg-white border border-zinc-200 px-3 py-1.5 text-xs font-mono rounded-lg text-zinc-900 focus:outline-none focus:border-zinc-400"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsChangingPin(false);
+                    setNewPin('');
+                    setConfirmPin('');
+                    setPinError('');
+                  }}
+                  className="px-3 py-1 text-xs text-zinc-600 hover:text-zinc-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSavePin}
+                  className="px-3 py-1 rounded-md bg-zinc-900 text-white text-xs font-medium"
+                >
+                  Save PIN
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Notification Reminder Section */}
@@ -139,7 +315,7 @@ export function SettingsModal({
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-700 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-xs">notifications</span>
+                <Bell className="w-3.5 h-3.5 text-zinc-600" />
                 <span>Daily Reminder</span>
               </div>
               <p className="text-[11px] text-zinc-500 mt-0.5">
@@ -149,7 +325,7 @@ export function SettingsModal({
 
             <button
               type="button"
-              onClick={handleToggle}
+              onClick={handleToggleReminder}
               disabled={isBlocked}
               className={`w-11 h-6 rounded-full transition-colors relative ${
                 settings.enabled ? 'bg-zinc-900' : 'bg-zinc-200'

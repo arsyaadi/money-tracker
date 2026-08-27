@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Eye, EyeOff, Lock, Edit2, Trash2, Wallet, AlertCircle } from 'lucide-react';
 import { Asset } from '@/lib/types';
 import { deleteAsset } from '@/lib/apiClient';
 
@@ -8,6 +9,9 @@ interface AssetListProps {
   assets: Asset[];
   onDelete: (id: string) => void;
   onEdit: (asset: Asset) => void;
+  showBalances?: boolean;
+  onToggleVisibility?: () => void;
+  isPinLocked?: boolean;
 }
 
 function formatAmount(amount: number): string {
@@ -18,10 +22,16 @@ function formatAmount(amount: number): string {
   }).format(amount);
 }
 
-export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
+export function AssetList({
+  assets,
+  onDelete,
+  onEdit,
+  showBalances = true,
+  onToggleVisibility,
+  isPinLocked = false,
+}: AssetListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [assetToDelete, setAssetToDelete] = useState<{ id: string; name: string } | null>(null);
-  const [showValuations, setShowValuations] = useState<boolean>(true);
 
   const totalAssets = assets.reduce((sum, a) => sum + a.amount, 0);
 
@@ -52,8 +62,8 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
       {assetToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-xl border border-zinc-200 p-6 max-w-sm w-full shadow-lg flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-rose-600">
-              <span className="material-symbols-outlined text-xl">warning</span>
+            <div className="flex items-center gap-2 text-zinc-900">
+              <AlertCircle className="w-5 h-5 text-rose-600" />
               <h3 className="font-semibold text-base text-zinc-900">Remove Holding?</h3>
             </div>
             <p className="text-xs text-zinc-600">
@@ -86,20 +96,26 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Portfolio Valuation
             </span>
-            <button
-              type="button"
-              onClick={() => setShowValuations(!showValuations)}
-              className="p-1 rounded text-zinc-400 hover:text-zinc-700 transition-colors"
-              title={showValuations ? 'Hide figures' : 'Show figures'}
-            >
-              <span className="material-symbols-outlined text-sm">
-                {showValuations ? 'visibility' : 'visibility_off'}
-              </span>
-            </button>
+            {onToggleVisibility && (
+              <button
+                type="button"
+                onClick={onToggleVisibility}
+                className="p-1 rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors flex items-center gap-1"
+                title={showBalances ? 'Hide balance figures' : isPinLocked ? 'Enter PIN to reveal figures' : 'Reveal balance figures'}
+              >
+                {showBalances ? (
+                  <Eye className="w-3.5 h-3.5" />
+                ) : isPinLocked ? (
+                  <Lock className="w-3.5 h-3.5 text-zinc-700" />
+                ) : (
+                  <EyeOff className="w-3.5 h-3.5" />
+                )}
+              </button>
+            )}
           </div>
 
           <div className="text-2xl sm:text-4xl font-mono font-bold text-zinc-900 tabular-nums">
-            {showValuations ? formatAmount(totalAssets) : '••••••••••••'}
+            {showBalances ? formatAmount(totalAssets) : '••••••••••••'}
           </div>
           <p className="text-xs text-zinc-500 mt-1 font-sans">
             Cumulative across {assets.length} active holdings and accounts.
@@ -129,7 +145,7 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
 
         {assets.length === 0 ? (
           <div className="p-12 text-center text-xs text-zinc-400 flex flex-col items-center justify-center gap-2">
-            <span className="material-symbols-outlined text-3xl text-zinc-300">account_balance</span>
+            <Wallet className="w-8 h-8 text-zinc-300 stroke-1" />
             <p>No holdings recorded yet.</p>
           </div>
         ) : (
@@ -142,8 +158,8 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
                   className="p-4 sm:px-6 flex items-center justify-between gap-4 hover:bg-zinc-50/80 transition-colors"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-base shrink-0">
-                      {asset.icon || '💰'}
+                    <div className="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-700 shrink-0">
+                      <Wallet className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-zinc-900 truncate">
@@ -159,7 +175,7 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
 
                   <div className="flex items-center gap-4">
                     <div className="font-mono text-sm sm:text-base font-bold text-zinc-900 tabular-nums">
-                      {showValuations ? formatAmount(asset.amount) : '••••••'}
+                      {showBalances ? formatAmount(asset.amount) : '••••••'}
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -169,7 +185,7 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
                         className="p-1.5 rounded text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-colors"
                         title="Edit holding"
                       >
-                        <span className="material-symbols-outlined text-base">edit</span>
+                        <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         type="button"
@@ -178,7 +194,7 @@ export function AssetList({ assets, onDelete, onEdit }: AssetListProps) {
                         className="p-1.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-zinc-100 transition-colors"
                         title="Remove holding"
                       >
-                        <span className="material-symbols-outlined text-base">delete</span>
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

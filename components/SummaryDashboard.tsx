@@ -1,5 +1,6 @@
 'use client';
 
+import { ArrowDownLeft, ArrowUpRight, PieChart, TrendingUp } from 'lucide-react';
 import { Expense, Income, CategoryData } from '@/lib/types';
 
 interface SummaryDashboardProps {
@@ -9,6 +10,7 @@ interface SummaryDashboardProps {
   incomeCategories: CategoryData[];
   filterMonth?: string;
   view?: 'combined' | 'separate';
+  showBalances?: boolean;
 }
 
 function formatAmount(amount: number): string {
@@ -25,6 +27,7 @@ export function SummaryDashboard({
   categories,
   incomeCategories,
   filterMonth,
+  showBalances = true,
 }: SummaryDashboardProps) {
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
   const totalIncome = incomes.reduce((s, i) => s + i.amount, 0);
@@ -82,7 +85,7 @@ export function SummaryDashboard({
                 netBalance >= 0 ? 'text-zinc-900' : 'text-rose-600'
               }`}
             >
-              {formatAmount(netBalance)}
+              {showBalances ? formatAmount(netBalance) : '••••••••••••'}
             </div>
             <p className="text-xs text-zinc-500 mt-1 font-sans">
               {netBalance >= 0 ? 'Surplus cash flow this period' : 'Deficit cash flow this period'}
@@ -115,21 +118,21 @@ export function SummaryDashboard({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
           <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200">
             <div className="flex items-center gap-1.5 text-emerald-700 text-xs font-semibold uppercase tracking-wider mb-1">
-              <span className="material-symbols-outlined text-base">arrow_downward</span>
+              <ArrowDownLeft className="w-4 h-4" />
               <span>Total Inflow ({incomes.length})</span>
             </div>
             <div className="font-mono text-xl font-bold text-emerald-700 tabular-nums">
-              + {formatAmount(totalIncome)}
+              {showBalances ? `+ ${formatAmount(totalIncome)}` : '••••••••'}
             </div>
           </div>
 
           <div className="p-4 rounded-lg bg-zinc-50 border border-zinc-200">
             <div className="flex items-center gap-1.5 text-rose-700 text-xs font-semibold uppercase tracking-wider mb-1">
-              <span className="material-symbols-outlined text-base">arrow_upward</span>
+              <ArrowUpRight className="w-4 h-4" />
               <span>Total Outflow ({expenses.length})</span>
             </div>
             <div className="font-mono text-xl font-bold text-rose-700 tabular-nums">
-              - {formatAmount(totalExpenses)}
+              {showBalances ? `- ${formatAmount(totalExpenses)}` : '••••••••'}
             </div>
           </div>
         </div>
@@ -141,11 +144,11 @@ export function SummaryDashboard({
         <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-xs flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-900 flex items-center gap-2">
-              <span className="material-symbols-outlined text-rose-600 text-base">pie_chart</span>
+              <PieChart className="w-4 h-4 text-rose-600" />
               <span>Expense Categories</span>
             </h3>
             <span className="font-mono text-xs font-bold text-rose-600">
-              {formatAmount(totalExpenses)}
+              {showBalances ? formatAmount(totalExpenses) : '••••••'}
             </span>
           </div>
 
@@ -163,16 +166,13 @@ export function SummaryDashboard({
                 return (
                   <div key={cat.name} className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span>{cat.icon}</span>
-                        <span className="font-medium text-zinc-800 font-sans">{cat.name}</span>
-                      </div>
+                      <span className="font-medium text-zinc-800 font-sans">{cat.name}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] text-zinc-400 font-mono">
                           {pct.toFixed(1)}%
                         </span>
                         <span className="font-mono font-semibold text-zinc-900 tabular-nums">
-                          {formatAmount(val)}
+                          {showBalances ? formatAmount(val) : '••••••'}
                         </span>
                       </div>
                     </div>
@@ -193,11 +193,11 @@ export function SummaryDashboard({
         <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-xs flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-900 flex items-center gap-2">
-              <span className="material-symbols-outlined text-emerald-600 text-base">trending_up</span>
+              <TrendingUp className="w-4 h-4 text-emerald-600" />
               <span>Income Sources</span>
             </h3>
             <span className="font-mono text-xs font-bold text-emerald-600">
-              {formatAmount(totalIncome)}
+              {showBalances ? formatAmount(totalIncome) : '••••••'}
             </span>
           </div>
 
@@ -215,16 +215,13 @@ export function SummaryDashboard({
                 return (
                   <div key={cat.name} className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span>{cat.icon}</span>
-                        <span className="font-medium text-zinc-800 font-sans">{cat.name}</span>
-                      </div>
+                      <span className="font-medium text-zinc-800 font-sans">{cat.name}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-[11px] text-zinc-400 font-mono">
                           {pct.toFixed(1)}%
                         </span>
                         <span className="font-mono font-semibold text-emerald-600 tabular-nums">
-                          {formatAmount(val)}
+                          {showBalances ? formatAmount(val) : '••••••'}
                         </span>
                       </div>
                     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AlertCircle, Trash2, ArrowDownLeft } from 'lucide-react';
 import { Income, CategoryData } from '@/lib/types';
 import { deleteIncome } from '@/lib/apiClient';
 import { CategoryBadge } from './CategoryBadge';
@@ -9,6 +10,7 @@ interface IncomeListProps {
   incomes: Income[];
   categories: CategoryData[];
   onDelete: (id: string) => void;
+  showBalances?: boolean;
 }
 
 function formatAmount(amount: number): string {
@@ -19,7 +21,12 @@ function formatAmount(amount: number): string {
   }).format(amount);
 }
 
-export function IncomeList({ incomes, categories, onDelete }: IncomeListProps) {
+export function IncomeList({
+  incomes,
+  categories,
+  onDelete,
+  showBalances = true,
+}: IncomeListProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [incomeToDelete, setIncomeToDelete] = useState<{ id: string; title: string } | null>(null);
 
@@ -45,21 +52,24 @@ export function IncomeList({ incomes, categories, onDelete }: IncomeListProps) {
   };
 
   const grouped = incomes.reduce((acc, income) => {
-    if (!acc[income.date]) {
-      acc[income.date] = [];
+    const d = income?.date ? String(income.date).substring(0, 10) : 'Unknown Date';
+    if (!acc[d]) {
+      acc[d] = [];
     }
-    acc[income.date].push(income);
+    acc[d].push(income);
     return acc;
   }, {} as Record<string, Income[]>);
 
-  const sortedDates = Object.keys(grouped).sort(
-    (a, b) => new Date(b).getTime() - new Date(a).getTime()
-  );
+  const sortedDates = Object.keys(grouped).sort((a, b) => {
+    if (a === 'Unknown Date') return 1;
+    if (b === 'Unknown Date') return -1;
+    return new Date(b).getTime() - new Date(a).getTime();
+  });
 
   if (incomes.length === 0) {
     return (
       <div className="bg-white border border-zinc-200 rounded-xl p-12 text-center flex flex-col items-center justify-center gap-2 text-zinc-400">
-        <span className="material-symbols-outlined text-3xl text-zinc-300">payments</span>
+        <ArrowDownLeft className="w-8 h-8 text-zinc-300 stroke-1" />
         <h3 className="text-sm font-medium text-zinc-700">No income records found</h3>
         <p className="text-xs">Entries will appear here in chronological order.</p>
       </div>
@@ -72,8 +82,8 @@ export function IncomeList({ incomes, categories, onDelete }: IncomeListProps) {
       {incomeToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-xl border border-zinc-200 p-6 max-w-sm w-full shadow-lg flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-rose-600">
-              <span className="material-symbols-outlined text-xl">warning</span>
+            <div className="flex items-center gap-2 text-zinc-900">
+              <AlertCircle className="w-5 h-5 text-rose-600" />
               <h3 className="font-semibold text-base text-zinc-900">Delete Income Entry?</h3>
             </div>
             <p className="text-xs text-zinc-600">
@@ -101,15 +111,18 @@ export function IncomeList({ incomes, categories, onDelete }: IncomeListProps) {
 
       {sortedDates.map((date) => {
         const dayIncomes = grouped[date];
-        const dayTotal = dayIncomes.reduce((s, i) => s + i.amount, 0);
+        const dayTotal = dayIncomes.reduce((s, i) => s + (Number(i.amount) || 0), 0);
 
-        const d = new Date(date + 'T00:00:00');
-        const formattedDate = new Intl.DateTimeFormat('en-US', {
-          weekday: 'short',
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        }).format(d);
+        const d = date !== 'Unknown Date' ? new Date(date + 'T00:00:00') : null;
+        const formattedDate =
+          d && !isNaN(d.getTime())
+            ? new Intl.DateTimeFormat('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              }).format(d)
+            : date;
 
         return (
           <div
@@ -126,7 +139,7 @@ export function IncomeList({ incomes, categories, onDelete }: IncomeListProps) {
                   {dayIncomes.length} {dayIncomes.length === 1 ? 'item' : 'items'}
                 </span>
                 <span className="font-mono text-xs font-bold text-emerald-600 tabular-nums">
-                  + {formatAmount(dayTotal)}
+                  {showBalances ? `+ ${formatAmount(dayTotal)}` : '••••••'}
                 </span>
               </div>
             </div>
@@ -151,7 +164,7 @@ export function IncomeList({ incomes, categories, onDelete }: IncomeListProps) {
 
                   <div className="flex items-center gap-3">
                     <span className="font-mono text-xs sm:text-sm font-bold text-emerald-600 tabular-nums">
-                      + {formatAmount(income.amount)}
+                      {showBalances ? `+ ${formatAmount(income.amount)}` : '••••••'}
                     </span>
 
                     <button
@@ -161,7 +174,7 @@ export function IncomeList({ incomes, categories, onDelete }: IncomeListProps) {
                       className="p-1 text-zinc-400 hover:text-rose-600 transition-colors rounded"
                       title="Delete income"
                     >
-                      <span className="material-symbols-outlined text-base">delete</span>
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>

@@ -6,20 +6,96 @@ export function isTauri(): boolean {
   return '__TAURI_INTERNALS__' in window || '__TAURI__' in window;
 }
 
-function getDeploymentId(): string | undefined {
+export function getDeploymentId(): string | undefined {
   if (typeof window === 'undefined') return undefined;
   return localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID') || undefined;
 }
 
-function getWebHeaders(): HeadersInit {
-  const deploymentId = getDeploymentId();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  if (deploymentId) {
-    headers['x-deployment-id'] = deploymentId;
+function getAppsScriptBaseUrl(deploymentId?: string): string | null {
+  const id = deploymentId || getDeploymentId();
+  if (!id || !id.trim()) return null;
+
+  const trimmed = id.trim();
+  if (trimmed.startsWith('http')) {
+    if (trimmed.includes('/s/')) {
+      const pos = trimmed.indexOf('/s/');
+      const afterS = trimmed.slice(pos + 3);
+      const slashPos = afterS.indexOf('/');
+      const depId = slashPos !== -1 ? afterS.slice(0, slashPos) : afterS;
+      return `https://script.google.com/macros/s/${depId}/exec`;
+    }
+    return trimmed;
   }
-  return headers;
+  return `https://script.google.com/macros/s/${trimmed}/exec`;
+}
+
+function normalizeDateString(val: unknown): string {
+  if (!val) return new Date().toISOString().substring(0, 10);
+  const str = String(val).trim();
+  if (str.length >= 10 && str[4] === '-' && str[7] === '-') {
+    return str.substring(0, 10);
+  }
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().substring(0, 10);
+  }
+  return str.substring(0, 10) || new Date().toISOString().substring(0, 10);
+}
+
+async function appsScriptGet<T>(params: Record<string, string | undefined>): Promise<T> {
+  const baseUrl = getAppsScriptBaseUrl();
+  if (!baseUrl) {
+    throw new Error('Google Apps Script Deployment ID not configured');
+  }
+
+  const url = new URL(baseUrl);
+  Object.entries(params).forEach(([key, val]) => {
+    if (val !== undefined && val !== null && val !== '') {
+      url.searchParams.append(key, val);
+    }
+  });
+
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    redirect: 'follow',
+  });
+
+  if (!res.ok) {
+    throw new Error(`Google Apps Script request failed with status ${res.status}`);
+  }
+
+  const data = await res.json();
+  if (data.error) {
+    throw new Error(data.error);
+  }
+  return data as T;
+}
+
+async function appsScriptPost<T>(body: Record<string, unknown>): Promise<T> {
+  const baseUrl = getAppsScriptBaseUrl();
+  if (!baseUrl) {
+    throw new Error('Google Apps Script Deployment ID not configured');
+  }
+
+  // Note: Using 'text/plain;charset=utf-8' prevents CORS preflight OPTIONS request in browser
+  const res = await fetch(baseUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8',
+    },
+    body: JSON.stringify(body),
+    redirect: 'follow',
+  });
+
+  if (!res.ok) {
+    throw new Error(`Google Apps Script request failed with status ${res.status}`);
+  }
+
+  const data = await res.json();
+  if (data.error) {
+    throw new Error(data.error);
+  }
+  return data as T;
 }
 
 // ===== CATEGORIES =====
@@ -29,12 +105,18 @@ export async function getCategories(): Promise<CategoryData[]> {
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch('/api/categories', {
-    headers: getWebHeaders(),
-  });
-  if (!res.ok) throw new Error('Failed to fetch categories');
-  const data = await res.json();
-  return data.categories || [];
+
+  if (!getDeploymentId()) return [];
+
+  try {
+    const data = await appsScriptGet<{ categories?: CategoryData[] }>({
+      action: 'getCategories',
+    });
+    return data.categories || [];
+  } catch (err) {
+    console.warn('Direct fetch categories failed:', err);
+    return [];
+  }
 }
 
 export async function addCategory(category: Omit<CategoryData, 'id'>): Promise<CategoryData> {
@@ -44,13 +126,11 @@ export async function addCategory(category: Omit<CategoryData, 'id'>): Promise<C
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch('/api/categories', {
-    method: 'POST',
-    headers: getWebHeaders(),
-    body: JSON.stringify(category),
+
+  const data = await appsScriptPost<{ category: CategoryData }>({
+    action: 'addCategory',
+    category,
   });
-  if (!res.ok) throw new Error('Failed to add category');
-  const data = await res.json();
   return data.category;
 }
 
@@ -62,11 +142,11 @@ export async function deleteCategory(id: string): Promise<void> {
     });
     return;
   }
-  const res = await fetch(`/api/categories/${id}`, {
-    method: 'DELETE',
-    headers: getWebHeaders(),
+
+  await appsScriptPost<{ success?: boolean }>({
+    action: 'deleteCategory',
+    id,
   });
-  if (!res.ok) throw new Error('Failed to delete category');
 }
 
 // ===== EXPENSES =====
@@ -78,16 +158,24 @@ export async function getExpenses(month?: string, category?: string): Promise<Ex
       deploymentId: getDeploymentId(),
     });
   }
-  const params = new URLSearchParams();
-  if (month) params.append('month', month);
-  if (category) params.append('category', category);
-  const url = '/api/expenses' + (params.toString() ? '?' + params.toString() : '');
-  const res = await fetch(url, {
-    headers: getWebHeaders(),
-  });
-  if (!res.ok) throw new Error('Failed to fetch expenses');
-  const data = await res.json();
-  return data.expenses || [];
+
+  if (!getDeploymentId()) return [];
+
+  try {
+    const data = await appsScriptGet<{ expenses?: Expense[] }>({
+      action: 'getExpenses',
+      month: month || undefined,
+      category: category || undefined,
+    });
+    return (data.expenses || []).map((e) => ({
+      ...e,
+      date: normalizeDateString(e.date),
+      amount: Number(e.amount) || 0,
+    }));
+  } catch (err) {
+    console.warn('Direct fetch expenses failed:', err);
+    return [];
+  }
 }
 
 export async function addExpense(
@@ -99,13 +187,11 @@ export async function addExpense(
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch('/api/expenses', {
-    method: 'POST',
-    headers: getWebHeaders(),
-    body: JSON.stringify(expense),
+
+  const data = await appsScriptPost<{ expense: Expense }>({
+    action: 'addExpense',
+    expense,
   });
-  if (!res.ok) throw new Error('Failed to add expense');
-  const data = await res.json();
   return data.expense;
 }
 
@@ -117,11 +203,11 @@ export async function deleteExpense(id: string): Promise<void> {
     });
     return;
   }
-  const res = await fetch(`/api/expenses/${id}`, {
-    method: 'DELETE',
-    headers: getWebHeaders(),
+
+  await appsScriptPost<{ success?: boolean }>({
+    action: 'deleteExpense',
+    id,
   });
-  if (!res.ok) throw new Error('Failed to delete expense');
 }
 
 export interface MonthlyTotalResponse {
@@ -136,11 +222,13 @@ export async function getMonthlySummary(month: string): Promise<Record<string, u
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch(`/api/expenses/monthly-total?month=${month}`, {
-    headers: getWebHeaders(),
+
+  if (!getDeploymentId()) return {};
+
+  return await appsScriptGet<Record<string, unknown>>({
+    action: 'getMonthlySummary',
+    month,
   });
-  if (!res.ok) throw new Error('Failed to fetch monthly total');
-  return await res.json();
 }
 
 export async function getMonthlyTotal(month: string): Promise<MonthlyTotalResponse> {
@@ -150,11 +238,29 @@ export async function getMonthlyTotal(month: string): Promise<MonthlyTotalRespon
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch(`/api/expenses/monthly-total?month=${month}`, {
-    headers: getWebHeaders(),
+
+  if (!getDeploymentId()) return { total: 0 };
+
+  return await appsScriptGet<MonthlyTotalResponse>({
+    action: 'getMonthlyTotal',
+    month,
   });
-  if (!res.ok) throw new Error('Failed to fetch monthly total');
-  return await res.json();
+}
+
+export async function getCategoryTotals(month?: string): Promise<Record<string, number>> {
+  if (isTauri()) {
+    return await invoke('get_category_totals', {
+      month: month || undefined,
+      deploymentId: getDeploymentId(),
+    });
+  }
+
+  if (!getDeploymentId()) return {};
+
+  return await appsScriptGet<Record<string, number>>({
+    action: 'getCategoryTotals',
+    month: month || undefined,
+  });
 }
 
 // ===== INCOME CATEGORIES =====
@@ -164,12 +270,18 @@ export async function getIncomeCategories(): Promise<CategoryData[]> {
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch('/api/income-categories', {
-    headers: getWebHeaders(),
-  });
-  if (!res.ok) throw new Error('Failed to fetch income categories');
-  const data = await res.json();
-  return data.categories || [];
+
+  if (!getDeploymentId()) return [];
+
+  try {
+    const data = await appsScriptGet<{ categories?: CategoryData[] }>({
+      action: 'getIncomeCategories',
+    });
+    return data.categories || [];
+  } catch (err) {
+    console.warn('Direct fetch income categories failed:', err);
+    return [];
+  }
 }
 
 export async function addIncomeCategory(
@@ -181,13 +293,11 @@ export async function addIncomeCategory(
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch('/api/income-categories', {
-    method: 'POST',
-    headers: getWebHeaders(),
-    body: JSON.stringify(category),
+
+  const data = await appsScriptPost<{ category: CategoryData }>({
+    action: 'addIncomeCategory',
+    category,
   });
-  if (!res.ok) throw new Error('Failed to add income category');
-  const data = await res.json();
   return data.category;
 }
 
@@ -199,11 +309,11 @@ export async function deleteIncomeCategory(id: string): Promise<void> {
     });
     return;
   }
-  const res = await fetch(`/api/income-categories/${id}`, {
-    method: 'DELETE',
-    headers: getWebHeaders(),
+
+  await appsScriptPost<{ success?: boolean }>({
+    action: 'deleteIncomeCategory',
+    id,
   });
-  if (!res.ok) throw new Error('Failed to delete income category');
 }
 
 // ===== INCOMES =====
@@ -215,16 +325,24 @@ export async function getIncomes(month?: string, category?: string): Promise<Inc
       deploymentId: getDeploymentId(),
     });
   }
-  const params = new URLSearchParams();
-  if (month) params.append('month', month);
-  if (category) params.append('category', category);
-  const url = '/api/incomes' + (params.toString() ? '?' + params.toString() : '');
-  const res = await fetch(url, {
-    headers: getWebHeaders(),
-  });
-  if (!res.ok) throw new Error('Failed to fetch incomes');
-  const data = await res.json();
-  return data.incomes || [];
+
+  if (!getDeploymentId()) return [];
+
+  try {
+    const data = await appsScriptGet<{ incomes?: Income[] }>({
+      action: 'getIncomes',
+      month: month || undefined,
+      category: category || undefined,
+    });
+    return (data.incomes || []).map((i) => ({
+      ...i,
+      date: normalizeDateString(i.date),
+      amount: Number(i.amount) || 0,
+    }));
+  } catch (err) {
+    console.warn('Direct fetch incomes failed:', err);
+    return [];
+  }
 }
 
 export async function addIncome(
@@ -236,13 +354,11 @@ export async function addIncome(
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch('/api/incomes', {
-    method: 'POST',
-    headers: getWebHeaders(),
-    body: JSON.stringify(income),
+
+  const data = await appsScriptPost<{ income: Income }>({
+    action: 'addIncome',
+    income,
   });
-  if (!res.ok) throw new Error('Failed to add income');
-  const data = await res.json();
   return data.income;
 }
 
@@ -254,11 +370,11 @@ export async function deleteIncome(id: string): Promise<void> {
     });
     return;
   }
-  const res = await fetch(`/api/incomes/${id}`, {
-    method: 'DELETE',
-    headers: getWebHeaders(),
+
+  await appsScriptPost<{ success?: boolean }>({
+    action: 'deleteIncome',
+    id,
   });
-  if (!res.ok) throw new Error('Failed to delete income');
 }
 
 export async function getMonthlyIncomeTotal(month: string): Promise<MonthlyTotalResponse> {
@@ -268,11 +384,29 @@ export async function getMonthlyIncomeTotal(month: string): Promise<MonthlyTotal
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch(`/api/incomes/monthly-total?month=${month}`, {
-    headers: getWebHeaders(),
+
+  if (!getDeploymentId()) return { total: 0 };
+
+  return await appsScriptGet<MonthlyTotalResponse>({
+    action: 'getMonthlyIncomeTotal',
+    month,
   });
-  if (!res.ok) throw new Error('Failed to fetch monthly income total');
-  return await res.json();
+}
+
+export async function getIncomeCategoryTotals(month?: string): Promise<Record<string, number>> {
+  if (isTauri()) {
+    return await invoke('get_income_category_totals', {
+      month: month || undefined,
+      deploymentId: getDeploymentId(),
+    });
+  }
+
+  if (!getDeploymentId()) return {};
+
+  return await appsScriptGet<Record<string, number>>({
+    action: 'getIncomeCategoryTotals',
+    month: month || undefined,
+  });
 }
 
 // ===== ASSETS =====
@@ -282,12 +416,18 @@ export async function getAssets(): Promise<Asset[]> {
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch('/api/assets', {
-    headers: getWebHeaders(),
-  });
-  if (!res.ok) throw new Error('Failed to fetch assets');
-  const data = await res.json();
-  return data.assets || [];
+
+  if (!getDeploymentId()) return [];
+
+  try {
+    const data = await appsScriptGet<{ assets?: Asset[] }>({
+      action: 'getAssets',
+    });
+    return data.assets || [];
+  } catch (err) {
+    console.warn('Direct fetch assets failed:', err);
+    return [];
+  }
 }
 
 export async function addAsset(
@@ -299,13 +439,11 @@ export async function addAsset(
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch('/api/assets', {
-    method: 'POST',
-    headers: getWebHeaders(),
-    body: JSON.stringify(asset),
+
+  const data = await appsScriptPost<{ asset: Asset }>({
+    action: 'addAsset',
+    asset,
   });
-  if (!res.ok) throw new Error('Failed to add asset');
-  const data = await res.json();
   return data.asset;
 }
 
@@ -318,13 +456,11 @@ export async function updateAsset(
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch('/api/assets', {
-    method: 'PUT',
-    headers: getWebHeaders(),
-    body: JSON.stringify(asset),
+
+  const data = await appsScriptPost<{ asset: Asset }>({
+    action: 'updateAsset',
+    asset,
   });
-  if (!res.ok) throw new Error('Failed to update asset');
-  const data = await res.json();
   return data.asset;
 }
 
@@ -336,11 +472,11 @@ export async function deleteAsset(id: string): Promise<void> {
     });
     return;
   }
-  const res = await fetch(`/api/assets?id=${id}`, {
-    method: 'DELETE',
-    headers: getWebHeaders(),
+
+  await appsScriptPost<{ success?: boolean }>({
+    action: 'deleteAsset',
+    id,
   });
-  if (!res.ok) throw new Error('Failed to delete asset');
 }
 
 export async function getAssetsTotal(): Promise<Record<string, unknown>> {
@@ -349,9 +485,10 @@ export async function getAssetsTotal(): Promise<Record<string, unknown>> {
       deploymentId: getDeploymentId(),
     });
   }
-  const res = await fetch('/api/assets', {
-    headers: getWebHeaders(),
+
+  if (!getDeploymentId()) return {};
+
+  return await appsScriptGet<Record<string, unknown>>({
+    action: 'getAssetsTotal',
   });
-  if (!res.ok) throw new Error('Failed to fetch assets total');
-  return await res.json();
 }

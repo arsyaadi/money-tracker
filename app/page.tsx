@@ -2,6 +2,24 @@
 
 import { useState, useEffect, useCallback, useTransition } from 'react';
 import Image from 'next/image';
+import {
+  LayoutDashboard,
+  MinusCircle,
+  PlusCircle,
+  Wallet,
+  History,
+  BarChart3,
+  RefreshCw,
+  Sliders,
+  Eye,
+  EyeOff,
+  Lock,
+  ArrowRight,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronRight,
+  Info,
+} from 'lucide-react';
 import { Expense, Income, Asset, CategoryData } from '@/lib/types';
 import {
   getExpenses,
@@ -10,6 +28,7 @@ import {
   getCategories,
   getIncomeCategories,
 } from '@/lib/apiClient';
+import { isPinEnabled } from '@/lib/security';
 import { AddExpenseForm } from '@/components/AddExpenseForm';
 import { AddIncomeForm } from '@/components/AddIncomeForm';
 import { AddAssetForm } from '@/components/AddAssetForm';
@@ -18,6 +37,7 @@ import { ExpenseList } from '@/components/ExpenseList';
 import { IncomeList } from '@/components/IncomeList';
 import { SummaryDashboard } from '@/components/SummaryDashboard';
 import { SettingsModal } from '@/components/SettingsModal';
+import { PinModal } from '@/components/PinModal';
 import { CategoryBadge } from '@/components/CategoryBadge';
 
 type TabType = 'dashboard' | 'add-expense' | 'add-income' | 'assets' | 'history' | 'summary';
@@ -42,6 +62,9 @@ export default function Home() {
   const [historyType, setHistoryType] = useState<'all' | 'expense' | 'income'>('all');
   const [isConfigured, setIsConfigured] = useState<boolean>(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
+  const [showBalances, setShowBalances] = useState<boolean>(true);
+  const [pinProtected, setPinProtected] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [, startTransition] = useTransition();
@@ -51,9 +74,15 @@ export default function Home() {
     return !!localStorage.getItem('APPS_SCRIPT_DEPLOYMENT_ID');
   };
 
+  const updatePinState = useCallback(() => {
+    const enabled = isPinEnabled();
+    setPinProtected(enabled);
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setIsConfigured(checkConfigured());
+    updatePinState();
 
     try {
       const [cats, incCats, expList, incList, assetList] = await Promise.all([
@@ -72,10 +101,10 @@ export default function Home() {
 
       const uniqueMonths = Array.from(
         new Set([
-          ...expList.map((e) => e.date.substring(0, 7)),
-          ...incList.map((i) => i.date.substring(0, 7)),
+          ...expList.map((e) => (typeof e?.date === 'string' ? e.date.substring(0, 7) : '')),
+          ...incList.map((i) => (typeof i?.date === 'string' ? i.date.substring(0, 7) : '')),
         ])
-      ).filter(Boolean).sort().reverse();
+      ).filter((m) => !!m && m.length === 7).sort().reverse();
 
       setAvailableMonths(uniqueMonths);
     } catch (err) {
@@ -83,11 +112,29 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth]);
+  }, [selectedMonth, updatePinState]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handleToggleVisibility = () => {
+    if (showBalances) {
+      // Hide immediately
+      setShowBalances(false);
+    } else {
+      // If PIN is configured & enabled, prompt PIN modal
+      if (pinProtected) {
+        setIsPinModalOpen(true);
+      } else {
+        setShowBalances(true);
+      }
+    }
+  };
+
+  const handlePinSuccess = () => {
+    setShowBalances(true);
+  };
 
   const handleAddExpense = (expense: Expense) => {
     startTransition(() => {
@@ -146,6 +193,7 @@ export default function Home() {
     ...expenses.map((e) => ({ ...e, type: 'expense' as const })),
     ...incomes.map((i) => ({ ...i, type: 'income' as const })),
   ]
+    .filter((tx) => !!tx && typeof tx.date === 'string' && tx.date.length > 0)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 8);
 
@@ -170,25 +218,27 @@ export default function Home() {
           {/* Desktop Nav Items */}
           <nav className="hidden md:flex items-center gap-1">
             {[
-              { id: 'dashboard', label: 'Dashboard' },
-              { id: 'add-expense', label: 'Expense' },
-              { id: 'add-income', label: 'Income' },
-              { id: 'assets', label: 'Assets' },
-              { id: 'history', label: 'Ledger' },
-              { id: 'summary', label: 'Summary' },
+              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+              { id: 'add-expense', label: 'Expense', icon: MinusCircle },
+              { id: 'add-income', label: 'Income', icon: PlusCircle },
+              { id: 'assets', label: 'Assets', icon: Wallet },
+              { id: 'history', label: 'Ledger', icon: History },
+              { id: 'summary', label: 'Summary', icon: BarChart3 },
             ].map((tab) => {
               const isActive = activeTab === tab.id;
+              const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as TabType)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors ${
                     isActive
                       ? 'bg-zinc-100 text-zinc-900 font-semibold'
                       : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50'
                   }`}
                 >
-                  {tab.label}
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{tab.label}</span>
                 </button>
               );
             })}
@@ -197,6 +247,22 @@ export default function Home() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-2">
+          {/* Stealth Balance Toggle */}
+          <button
+            type="button"
+            onClick={handleToggleVisibility}
+            className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 btn-press transition-colors"
+            title={showBalances ? 'Hide balance figures' : pinProtected ? 'Unlock with PIN' : 'Show balances'}
+          >
+            {showBalances ? (
+              <Eye className="w-4 h-4" />
+            ) : pinProtected ? (
+              <Lock className="w-4 h-4 text-zinc-900" />
+            ) : (
+              <EyeOff className="w-4 h-4" />
+            )}
+          </button>
+
           <button
             type="button"
             onClick={loadData}
@@ -204,9 +270,7 @@ export default function Home() {
             className="px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-xs font-medium text-zinc-700 flex items-center gap-1.5 btn-press transition-colors"
             title="Sync Database"
           >
-            <span className={`material-symbols-outlined text-sm ${loading ? 'animate-spin text-zinc-900' : ''}`}>
-              sync
-            </span>
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-zinc-900' : ''}`} />
             <span className="hidden sm:inline">Sync</span>
           </button>
 
@@ -216,7 +280,7 @@ export default function Home() {
             className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 btn-press transition-colors"
             title="Settings"
           >
-            <span className="material-symbols-outlined text-base">tune</span>
+            <Sliders className="w-4 h-4" />
           </button>
         </div>
       </header>
@@ -224,8 +288,8 @@ export default function Home() {
       {/* Cloud DB Notice */}
       {!isConfigured && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-800 flex items-center justify-between">
-          <div className="flex items-center gap-2 max-w-[1200px] mx-auto w-full">
-            <span className="material-symbols-outlined text-base text-amber-700">info</span>
+          <div className="flex items-center gap-2 max-w-[1100px] mx-auto w-full">
+            <Info className="w-4 h-4 text-amber-700 shrink-0" />
             <span>Configure Google Apps Script Deployment ID for remote cloud storage sync.</span>
             <button
               onClick={() => setIsSettingsOpen(true)}
@@ -245,11 +309,28 @@ export default function Home() {
             {/* Hero Net Worth Card */}
             <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
               <div className="flex flex-col gap-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Total Financial Position
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    Total Financial Position
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleToggleVisibility}
+                    className="text-zinc-400 hover:text-zinc-700 transition-colors"
+                    title={showBalances ? 'Hide' : 'Reveal'}
+                  >
+                    {showBalances ? (
+                      <Eye className="w-3.5 h-3.5" />
+                    ) : pinProtected ? (
+                      <Lock className="w-3.5 h-3.5 text-zinc-800" />
+                    ) : (
+                      <EyeOff className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+
                 <div className="text-3xl sm:text-5xl font-mono font-bold tracking-tight text-zinc-900 tabular-nums">
-                  {formatAmount(totalNetPosition)}
+                  {showBalances ? formatAmount(totalNetPosition) : '••••••••••••'}
                 </div>
                 <p className="text-xs text-zinc-500 font-sans mt-0.5">
                   Liquid asset holdings plus current period net cash flow.
@@ -259,20 +340,22 @@ export default function Home() {
               {/* Inflow & Outflow Summary */}
               <div className="flex items-center gap-3 w-full sm:w-auto">
                 <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 flex-1 sm:flex-initial">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 block mb-0.5">
-                    Inflow
-                  </span>
+                  <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 mb-0.5">
+                    <ArrowDownLeft className="w-3 h-3" />
+                    <span>Inflow</span>
+                  </div>
                   <span className="font-mono text-sm sm:text-base font-bold text-emerald-700 tabular-nums">
-                    + {formatAmount(totalIncomes)}
+                    {showBalances ? `+ ${formatAmount(totalIncomes)}` : '••••••••'}
                   </span>
                 </div>
 
                 <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 flex-1 sm:flex-initial">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-700 block mb-0.5">
-                    Outflow
-                  </span>
+                  <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-rose-700 mb-0.5">
+                    <ArrowUpRight className="w-3 h-3" />
+                    <span>Outflow</span>
+                  </div>
                   <span className="font-mono text-sm sm:text-base font-bold text-rose-700 tabular-nums">
-                    - {formatAmount(totalExpenses)}
+                    {showBalances ? `- ${formatAmount(totalExpenses)}` : '••••••••'}
                   </span>
                 </div>
               </div>
@@ -288,9 +371,7 @@ export default function Home() {
                   <span className="text-xs font-semibold text-rose-600 uppercase tracking-wider">
                     Expense
                   </span>
-                  <span className="material-symbols-outlined text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all text-sm">
-                    arrow_forward
-                  </span>
+                  <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-zinc-900">Record Expense</h3>
@@ -306,9 +387,7 @@ export default function Home() {
                   <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
                     Income
                   </span>
-                  <span className="material-symbols-outlined text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all text-sm">
-                    arrow_forward
-                  </span>
+                  <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-zinc-900">Record Income</h3>
@@ -324,9 +403,7 @@ export default function Home() {
                   <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
                     Portfolio
                   </span>
-                  <span className="material-symbols-outlined text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all text-sm">
-                    arrow_forward
-                  </span>
+                  <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-zinc-900">Asset Holdings</h3>
@@ -346,7 +423,7 @@ export default function Home() {
                   className="text-xs text-zinc-500 hover:text-zinc-900 font-medium flex items-center gap-1 transition-colors"
                 >
                   <span>Full Ledger</span>
-                  <span className="material-symbols-outlined text-sm">chevron_right</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
 
@@ -378,10 +455,14 @@ export default function Home() {
                         </div>
 
                         <div className="font-mono text-xs sm:text-sm font-bold tabular-nums">
-                          {isExpense ? (
-                            <span className="text-rose-600">- {formatAmount(tx.amount)}</span>
+                          {showBalances ? (
+                            isExpense ? (
+                              <span className="text-rose-600">- {formatAmount(tx.amount)}</span>
+                            ) : (
+                              <span className="text-emerald-600">+ {formatAmount(tx.amount)}</span>
+                            )
                           ) : (
-                            <span className="text-emerald-600">+ {formatAmount(tx.amount)}</span>
+                            <span className="text-zinc-400">••••••</span>
                           )}
                         </div>
                       </div>
@@ -422,6 +503,9 @@ export default function Home() {
               assets={assets}
               onDelete={handleDeleteAsset}
               onEdit={handleEditAsset}
+              showBalances={showBalances}
+              onToggleVisibility={handleToggleVisibility}
+              isPinLocked={pinProtected && !showBalances}
             />
 
             <AddAssetForm
@@ -490,6 +574,7 @@ export default function Home() {
                   expenses={expenses}
                   categories={categories}
                   onDelete={handleDeleteExpense}
+                  showBalances={showBalances}
                 />
               </div>
             )}
@@ -503,6 +588,7 @@ export default function Home() {
                   incomes={incomes}
                   categories={incomeCategories}
                   onDelete={handleDeleteIncome}
+                  showBalances={showBalances}
                 />
               </div>
             )}
@@ -518,6 +604,7 @@ export default function Home() {
             incomeCategories={incomeCategories}
             filterMonth={selectedMonth}
             view="combined"
+            showBalances={showBalances}
           />
         )}
       </main>
@@ -525,14 +612,15 @@ export default function Home() {
       {/* Mobile Bottom Navigation Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-zinc-200 px-2 py-1 flex items-center justify-around">
         {[
-          { id: 'dashboard', label: 'Dash', icon: 'dashboard' },
-          { id: 'add-expense', label: 'Expense', icon: 'remove_circle_outline' },
-          { id: 'add-income', label: 'Income', icon: 'add_circle_outline' },
-          { id: 'assets', label: 'Assets', icon: 'account_balance_wallet' },
-          { id: 'history', label: 'Ledger', icon: 'history' },
-          { id: 'summary', label: 'Stats', icon: 'analytics' },
+          { id: 'dashboard', label: 'Dash', icon: LayoutDashboard },
+          { id: 'add-expense', label: 'Expense', icon: MinusCircle },
+          { id: 'add-income', label: 'Income', icon: PlusCircle },
+          { id: 'assets', label: 'Assets', icon: Wallet },
+          { id: 'history', label: 'Ledger', icon: History },
+          { id: 'summary', label: 'Stats', icon: BarChart3 },
         ].map((tab) => {
           const isActive = activeTab === tab.id;
+          const Icon = tab.icon;
           return (
             <button
               key={tab.id}
@@ -543,7 +631,7 @@ export default function Home() {
                   : 'text-zinc-400 hover:text-zinc-700'
               }`}
             >
-              <span className="material-symbols-outlined text-lg">{tab.icon}</span>
+              <Icon className="w-5 h-5" />
               <span className="text-[10px] font-label uppercase mt-0.5">{tab.label}</span>
             </button>
           );
@@ -556,6 +644,14 @@ export default function Home() {
         onClose={() => setIsSettingsOpen(false)}
         onDeploymentIdSave={loadData}
         onRefresh={loadData}
+        onPinConfigChange={updatePinState}
+      />
+
+      {/* PIN Verification Modal */}
+      <PinModal
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        onSuccess={handlePinSuccess}
       />
     </div>
   );

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { Plus, CheckCircle2, AlertCircle, X, Tag } from 'lucide-react';
 import { Expense, CategoryData } from '@/lib/types';
 import { addExpense, addCategory, deleteCategory } from '@/lib/apiClient';
-import { EmojiPicker } from './EmojiPicker';
 
 function getLocalToday() {
   const now = new Date();
@@ -35,7 +35,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
 
   // Category creation state
   const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [newCat, setNewCat] = useState({ name: '', icon: '📌', color: '#e11d48' });
+  const [newCatName, setNewCatName] = useState('');
   const [addingCatLoading, setAddingCatLoading] = useState(false);
   const [deletingCatId, setDeletingCatId] = useState<string | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -74,17 +74,17 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCat.name.trim()) return;
+    if (!newCatName.trim()) return;
 
     setAddingCatLoading(true);
     setError('');
 
     try {
-      await addCategory(newCat);
+      await addCategory({ name: newCatName.trim(), icon: 'tag', color: '#09090b' });
       onRefreshCategories?.();
-      setForm((prev) => ({ ...prev, category: newCat.name }));
+      setForm((prev) => ({ ...prev, category: newCatName.trim() }));
       setIsAddingCategory(false);
-      setNewCat({ name: '', icon: '📌', color: '#e11d48' });
+      setNewCatName('');
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -137,8 +137,8 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
       {categoryToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-xl border border-zinc-200 p-6 max-w-sm w-full shadow-lg flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-rose-600">
-              <span className="material-symbols-outlined text-xl">warning</span>
+            <div className="flex items-center gap-2 text-zinc-900">
+              <AlertCircle className="w-5 h-5 text-rose-600" />
               <h3 className="font-semibold text-base text-zinc-900">Delete Category?</h3>
             </div>
             <p className="text-xs text-zinc-600">
@@ -168,14 +168,14 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
       <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-xs flex flex-col gap-6">
         {error && (
           <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-            <span className="material-symbols-outlined text-base">error</span>
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
           <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
-            <span className="material-symbols-outlined text-base">check_circle</span>
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>Expense recorded successfully!</span>
           </div>
         )}
@@ -243,36 +243,31 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
               <button
                 type="button"
                 onClick={() => setIsAddingCategory(!isAddingCategory)}
-                className="text-xs text-zinc-500 hover:text-zinc-900 font-medium transition-colors"
+                className="text-xs text-zinc-500 hover:text-zinc-900 font-medium transition-colors flex items-center gap-1"
               >
-                {isAddingCategory ? 'Cancel' : '+ New Category'}
+                <Plus className="w-3.5 h-3.5" />
+                <span>{isAddingCategory ? 'Cancel' : 'New Category'}</span>
               </button>
             </div>
 
             {/* Add Custom Category Drawer */}
             {isAddingCategory && (
-              <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 flex flex-col gap-2.5">
-                <div className="flex items-center gap-2">
-                  <EmojiPicker
-                    selectedEmoji={newCat.icon}
-                    onSelectEmoji={(emoji) => setNewCat({ ...newCat, icon: emoji })}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Category name..."
-                    value={newCat.name}
-                    onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
-                    className="flex-1 px-3 py-2 rounded-lg bg-white border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:border-zinc-400"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCategory}
-                    disabled={addingCatLoading || !newCat.name.trim()}
-                    className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition-colors disabled:opacity-50"
-                  >
-                    {addingCatLoading ? '...' : 'Add'}
-                  </button>
-                </div>
+              <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="New category name..."
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-lg bg-white border border-zinc-200 text-xs text-zinc-900 focus:outline-none focus:border-zinc-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddCategory}
+                  disabled={addingCatLoading || !newCatName.trim()}
+                  className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition-colors disabled:opacity-50"
+                >
+                  {addingCatLoading ? '...' : 'Add'}
+                </button>
               </div>
             )}
 
@@ -290,7 +285,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
                         : 'bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50'
                     }`}
                   >
-                    <span className="text-sm">{cat.icon}</span>
+                    <Tag className={`w-3.5 h-3.5 ${isSelected ? 'text-zinc-300' : 'text-zinc-500'}`} />
                     <span>{cat.name}</span>
 
                     {/* Delete Chip */}
@@ -303,7 +298,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
                       }`}
                       title="Delete category"
                     >
-                      <span className="material-symbols-outlined text-xs">close</span>
+                      <X className="w-3 h-3" />
                     </button>
                   </div>
                 );
