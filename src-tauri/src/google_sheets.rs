@@ -159,8 +159,12 @@ pub async fn get_expenses(
         let title = item.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string();
         let amount = item.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
         let category = item.get("category").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let created_at = item.get("createdAt").and_then(|v| v.as_str()).unwrap_or("");
-        let date = normalize_date_only(created_at);
+        let date_raw = item
+            .get("date")
+            .or_else(|| item.get("createdAt"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let date = normalize_date_only(date_raw);
 
         expenses.push(Expense {
             id,
@@ -316,8 +320,12 @@ pub async fn get_incomes(
         let title = item.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string();
         let amount = item.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
         let category = item.get("category").and_then(|v| v.as_str()).unwrap_or("").to_string();
-        let created_at = item.get("createdAt").and_then(|v| v.as_str()).unwrap_or("");
-        let date = normalize_date_only(created_at);
+        let date_raw = item
+            .get("date")
+            .or_else(|| item.get("createdAt"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let date = normalize_date_only(date_raw);
 
         incomes.push(Income {
             id,

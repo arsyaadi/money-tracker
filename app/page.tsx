@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useTransition } from 'react';
+import { useState, useEffect, useCallback, useMemo, useTransition } from 'react';
 import Image from 'next/image';
 import {
   LayoutDashboard,
@@ -17,8 +17,8 @@ import {
   ArrowRight,
   ArrowDownLeft,
   ArrowUpRight,
-  ChevronRight,
   Info,
+  ReceiptText,
 } from 'lucide-react';
 import { Expense, Income, Asset, CategoryData } from '@/lib/types';
 import {
@@ -38,6 +38,12 @@ import { IncomeList } from '@/components/IncomeList';
 import { SummaryDashboard } from '@/components/SummaryDashboard';
 import { SettingsModal } from '@/components/SettingsModal';
 import { PinModal } from '@/components/PinModal';
+import {
+  DashboardSkeleton,
+  AssetListSkeleton,
+  LedgerSkeleton,
+  SummarySkeleton,
+} from '@/components/Skeleton';
 import { CategoryBadge } from '@/components/CategoryBadge';
 
 type TabType = 'dashboard' | 'add-expense' | 'add-income' | 'assets' | 'history' | 'summary';
@@ -55,6 +61,21 @@ function getLocalMonthKey(): string {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   return `${year}-${month}`;
+}
+
+function getMonthKeyFromDate(dateStr?: string): string {
+  if (!dateStr) return '';
+  const str = String(dateStr).trim();
+  if (str.length >= 7 && str[4] === '-') {
+    return str.substring(0, 7);
+  }
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }
+  return '';
 }
 
 export default function Home() {
@@ -95,8 +116,8 @@ export default function Home() {
       const [cats, incCats, expList, incList, assetList] = await Promise.all([
         getCategories().catch(() => []),
         getIncomeCategories().catch(() => []),
-        getExpenses(selectedMonth || undefined).catch(() => []),
-        getIncomes(selectedMonth || undefined).catch(() => []),
+        getExpenses().catch(() => []),
+        getIncomes().catch(() => []),
         getAssets().catch(() => []),
       ]);
 
@@ -110,8 +131,8 @@ export default function Home() {
       const uniqueMonths = Array.from(
         new Set([
           currentMonth,
-          ...expList.map((e) => (typeof e?.date === 'string' ? e.date.substring(0, 7) : '')),
-          ...incList.map((i) => (typeof i?.date === 'string' ? i.date.substring(0, 7) : '')),
+          ...expList.map((e) => getMonthKeyFromDate(e?.date)),
+          ...incList.map((i) => getMonthKeyFromDate(i?.date)),
         ])
       ).filter((m) => !!m && m.length === 7).sort().reverse();
 
@@ -121,7 +142,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, updatePinState]);
+  }, [updatePinState]);
 
   useEffect(() => {
     loadData();
@@ -190,12 +211,43 @@ export default function Home() {
     setActiveTab('assets');
   };
 
-  // Calculations for Master Dashboard
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const totalIncomes = incomes.reduce((s, i) => s + i.amount, 0);
-  const netCashFlow = totalIncomes - totalExpenses;
-  const totalAssetNetWorth = assets.reduce((s, a) => s + a.amount, 0);
-  const totalNetPosition = totalAssetNetWorth + netCashFlow;
+  // Active month label for Master Dashboard
+  const activeMonthName = useMemo(() => {
+    if (!selectedMonth) return 'All Time';
+    const [y, m] = selectedMonth.split('-');
+    if (y && m) {
+      const d = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+      return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(d);
+    }
+    return selectedMonth;
+  }, [selectedMonth]);
+
+  // Calculations for Master Dashboard (Current / Selected Month)
+  const dashboardExpenses = useMemo(() => {
+    return selectedMonth
+      ? expenses.filter((e) => getMonthKeyFromDate(e.date) === selectedMonth)
+      : expenses;
+  }, [expenses, selectedMonth]);
+
+  const dashboardIncomes = useMemo(() => {
+    return selectedMonth
+      ? incomes.filter((i) => getMonthKeyFromDate(i.date) === selectedMonth)
+      : incomes;
+  }, [incomes, selectedMonth]);
+
+  const currentMonthExpenses = useMemo(() => {
+    return dashboardExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  }, [dashboardExpenses]);
+
+  const currentMonthIncomes = useMemo(() => {
+    return dashboardIncomes.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  }, [dashboardIncomes]);
+
+  const currentMonthNetPosition = currentMonthIncomes - currentMonthExpenses;
+
+  // Filtered lists for Ledger and Summary views
+  const filteredExpenses = dashboardExpenses;
+  const filteredIncomes = dashboardIncomes;
 
   // Recent transactions merged
   const recentTransactions = [
@@ -314,173 +366,207 @@ export default function Home() {
       <main className="flex-1 w-full max-w-[1100px] mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
         {/* ================= VIEW: DASHBOARD ================= */}
         {activeTab === 'dashboard' && (
-          <div className="flex flex-col gap-6">
-            {/* Hero Net Worth Card */}
-            <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Total Financial Position
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleToggleVisibility}
-                    className="text-zinc-400 hover:text-zinc-700 transition-colors"
-                    title={showBalances ? 'Hide' : 'Reveal'}
+          loading ? (
+            <DashboardSkeleton />
+          ) : (
+            <div className="flex flex-col gap-6">
+              {/* Hero Net Worth Card */}
+              <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Net Balance ({activeMonthName})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleToggleVisibility}
+                      className="text-zinc-400 hover:text-zinc-700 transition-colors"
+                      title={showBalances ? 'Hide' : 'Reveal'}
+                    >
+                      {showBalances ? (
+                        <Eye className="w-3.5 h-3.5" />
+                      ) : pinProtected ? (
+                        <Lock className="w-3.5 h-3.5 text-zinc-800" />
+                      ) : (
+                        <EyeOff className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+
+                  <div
+                    className={`text-3xl sm:text-5xl font-mono font-bold tracking-tight tabular-nums ${
+                      currentMonthNetPosition >= 0 ? 'text-zinc-900' : 'text-rose-600'
+                    }`}
                   >
-                    {showBalances ? (
-                      <Eye className="w-3.5 h-3.5" />
-                    ) : pinProtected ? (
-                      <Lock className="w-3.5 h-3.5 text-zinc-800" />
-                    ) : (
-                      <EyeOff className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
-
-                <div className="text-3xl sm:text-5xl font-mono font-bold tracking-tight text-zinc-900 tabular-nums">
-                  {showBalances ? formatAmount(totalNetPosition) : '••••••••••••'}
-                </div>
-                <p className="text-xs text-zinc-500 font-sans mt-0.5">
-                  Liquid asset holdings plus current period net cash flow.
-                </p>
-              </div>
-
-              {/* Inflow & Outflow Summary */}
-              <div className="flex items-center gap-3 w-full sm:w-auto">
-                <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 flex-1 sm:flex-initial">
-                  <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 mb-0.5">
-                    <ArrowDownLeft className="w-3 h-3" />
-                    <span>Inflow</span>
+                    {showBalances ? formatAmount(currentMonthNetPosition) : '••••••••••••'}
                   </div>
-                  <span className="font-mono text-sm sm:text-base font-bold text-emerald-700 tabular-nums">
-                    {showBalances ? `+ ${formatAmount(totalIncomes)}` : '••••••••'}
-                  </span>
+                  <p className="text-xs text-zinc-500 font-sans mt-0.5">
+                    {currentMonthNetPosition >= 0
+                      ? `Net surplus cash flow in ${activeMonthName}.`
+                      : `Net deficit cash flow in ${activeMonthName}.`}
+                  </p>
                 </div>
 
-                <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 flex-1 sm:flex-initial">
-                  <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-rose-700 mb-0.5">
-                    <ArrowUpRight className="w-3 h-3" />
-                    <span>Outflow</span>
+                {/* Inflow & Outflow Summary (This Month) + Month Filter */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                  <div className="flex items-center gap-3 flex-1 sm:flex-initial">
+                    <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 flex-1 sm:flex-initial min-w-[130px]">
+                      <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 mb-0.5">
+                        <ArrowDownLeft className="w-3 h-3" />
+                        <span>Inflow ({activeMonthName})</span>
+                      </div>
+                      <span className="font-mono text-sm sm:text-base font-bold text-emerald-700 tabular-nums">
+                        {showBalances ? `+ ${formatAmount(currentMonthIncomes)}` : '••••••••'}
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 flex-1 sm:flex-initial min-w-[130px]">
+                      <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-rose-700 mb-0.5">
+                        <ArrowUpRight className="w-3 h-3" />
+                        <span>Outflow ({activeMonthName})</span>
+                      </div>
+                      <span className="font-mono text-sm sm:text-base font-bold text-rose-700 tabular-nums">
+                        {showBalances ? `- ${formatAmount(currentMonthExpenses)}` : '••••••••'}
+                      </span>
+                    </div>
                   </div>
-                  <span className="font-mono text-sm sm:text-base font-bold text-rose-700 tabular-nums">
-                    {showBalances ? `- ${formatAmount(totalExpenses)}` : '••••••••'}
-                  </span>
-                </div>
-              </div>
-            </div>
 
-            {/* Quick Action Bento Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div
-                onClick={() => setActiveTab('add-expense')}
-                className="group cursor-pointer bg-white border border-zinc-200 rounded-xl p-5 shadow-xs hover:border-zinc-300 hover:shadow-sm btn-press transition-all flex flex-col justify-between gap-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-rose-600 uppercase tracking-wider">
-                    Expense
-                  </span>
-                  <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-zinc-900">Record Expense</h3>
-                  <p className="text-xs text-zinc-500 mt-0.5">Log outgoing spending.</p>
+                  {availableMonths.length > 0 && (
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="bg-white border border-zinc-200 text-xs font-mono rounded-lg px-2.5 py-2 text-zinc-800 focus:outline-none focus:border-zinc-400 self-end sm:self-center"
+                      title="Filter Month"
+                    >
+                      <option value="">All Months</option>
+                      {availableMonths.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 
-              <div
-                onClick={() => setActiveTab('add-income')}
-                className="group cursor-pointer bg-white border border-zinc-200 rounded-xl p-5 shadow-xs hover:border-zinc-300 hover:shadow-sm btn-press transition-all flex flex-col justify-between gap-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
-                    Income
-                  </span>
-                  <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-zinc-900">Record Income</h3>
-                  <p className="text-xs text-zinc-500 mt-0.5">Log revenues and earnings.</p>
-                </div>
-              </div>
-
-              <div
-                onClick={() => setActiveTab('assets')}
-                className="group cursor-pointer bg-white border border-zinc-200 rounded-xl p-5 shadow-xs hover:border-zinc-300 hover:shadow-sm btn-press transition-all flex flex-col justify-between gap-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
-                    Portfolio
-                  </span>
-                  <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-zinc-900 group-hover:translate-x-0.5 transition-all" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-zinc-900">Asset Holdings</h3>
-                  <p className="text-xs text-zinc-500 mt-0.5">Manage bank balances.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Transactions */}
-            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-xs">
-              <div className="px-6 py-3.5 border-b border-zinc-200 bg-zinc-50/60 flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-800">
-                  Recent Activity
-                </h3>
+              {/* Quick Action Bento Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <button
-                  onClick={() => setActiveTab('history')}
-                  className="text-xs text-zinc-500 hover:text-zinc-900 font-medium flex items-center gap-1 transition-colors"
+                  type="button"
+                  onClick={() => setActiveTab('add-expense')}
+                  className="bg-white border border-zinc-200 rounded-xl p-5 shadow-xs hover:border-zinc-300 btn-press transition-all flex flex-col justify-between text-left h-28"
                 >
-                  <span>Full Ledger</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-semibold text-rose-600 uppercase tracking-wider">
+                      Expense
+                    </span>
+                    <MinusCircle className="w-4 h-4 text-rose-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900">Record Expense</h3>
+                    <p className="text-xs text-zinc-500 mt-0.5">Log outgoing spending</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('add-income')}
+                  className="bg-white border border-zinc-200 rounded-xl p-5 shadow-xs hover:border-zinc-300 btn-press transition-all flex flex-col justify-between text-left h-28"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">
+                      Income
+                    </span>
+                    <PlusCircle className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900">Record Income</h3>
+                    <p className="text-xs text-zinc-500 mt-0.5">Log revenues and earnings</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('assets')}
+                  className="bg-white border border-zinc-200 rounded-xl p-5 shadow-xs hover:border-zinc-300 btn-press transition-all flex flex-col justify-between text-left h-28"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                      Portfolio
+                    </span>
+                    <Wallet className="w-4 h-4 text-zinc-900" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900">Asset Holdings</h3>
+                    <p className="text-xs text-zinc-500 mt-0.5">Manage bank balances</p>
+                  </div>
                 </button>
               </div>
 
-              {recentTransactions.length === 0 ? (
-                <div className="p-12 text-center text-xs text-zinc-400">
-                  No transactions recorded yet.
+              {/* Recent Transactions */}
+              <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-xs">
+                <div className="px-6 py-3.5 border-b border-zinc-200 bg-zinc-50/60 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-zinc-600" />
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-800">
+                      Recent Activity
+                    </h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('history')}
+                    className="text-xs font-medium text-zinc-600 hover:text-zinc-950 flex items-center gap-1 transition-colors"
+                  >
+                    <span>View all</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              ) : (
-                <div className="divide-y divide-zinc-100">
-                  {recentTransactions.map((tx) => {
-                    const isExpense = tx.type === 'expense';
-                    const activeCats = isExpense ? categories : incomeCategories;
 
-                    return (
-                      <div
-                        key={tx.id}
-                        className="p-3.5 sm:px-6 flex items-center justify-between gap-4 hover:bg-zinc-50/70 transition-colors"
-                      >
-                        <div className="flex items-center gap-3.5 min-w-0">
-                          <CategoryBadge categoryName={tx.category} categories={activeCats} size="sm" />
-                          <div className="min-w-0">
-                            <div className="text-xs sm:text-sm font-medium text-zinc-800 truncate">
-                              {tx.title || <span className="text-zinc-400 italic">Untitled</span>}
-                            </div>
-                            <div className="font-mono text-[10px] text-zinc-400 mt-0.5">
-                              {tx.date}
+                {recentTransactions.length === 0 ? (
+                  <div className="p-12 text-center text-xs text-zinc-400 flex flex-col items-center justify-center gap-2">
+                    <ReceiptText className="w-8 h-8 text-zinc-300 stroke-1" />
+                    <p>No transaction activity logged yet.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-zinc-100">
+                    {recentTransactions.map((tx) => {
+                      const isExpense = tx.type === 'expense';
+                      return (
+                        <div
+                          key={`${tx.type}-${tx.id}`}
+                          className="p-3.5 sm:px-6 flex items-center justify-between gap-4 hover:bg-zinc-50/70 transition-colors"
+                        >
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <CategoryBadge
+                              categoryName={tx.category}
+                              categories={isExpense ? categories : incomeCategories}
+                              size="sm"
+                            />
+                            <div className="min-w-0">
+                              <div className="text-xs sm:text-sm font-medium text-zinc-900 truncate font-sans">
+                                {tx.title || <span className="text-zinc-400 italic">Untitled</span>}
+                              </div>
+                              <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
+                                {tx.date}
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="font-mono text-xs sm:text-sm font-bold tabular-nums">
-                          {showBalances ? (
-                            isExpense ? (
+                          <div className="font-mono text-xs sm:text-sm font-bold tabular-nums">
+                            {isExpense ? (
                               <span className="text-rose-600">- {formatAmount(tx.amount)}</span>
                             ) : (
                               <span className="text-emerald-600">+ {formatAmount(tx.amount)}</span>
-                            )
-                          ) : (
-                            <span className="text-zinc-400">••••••</span>
-                          )}
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )
         )}
 
         {/* ================= VIEW: RECORD EXPENSE ================= */}
@@ -507,47 +593,45 @@ export default function Home() {
 
         {/* ================= VIEW: ASSETS & PORTFOLIO ================= */}
         {activeTab === 'assets' && (
-          <div className="flex flex-col gap-8">
-            <AssetList
-              assets={assets}
-              onDelete={handleDeleteAsset}
-              onEdit={handleEditAsset}
-              showBalances={showBalances}
-              onToggleVisibility={handleToggleVisibility}
-              isPinLocked={pinProtected && !showBalances}
-            />
-
-            <AddAssetForm
-              onAdd={handleAddAsset}
-              editingAsset={editingAsset}
-              onUpdate={handleAddAsset}
-              onCancelEdit={() => setEditingAsset(null)}
-            />
-          </div>
+          loading ? (
+            <AssetListSkeleton />
+          ) : (
+            <div className="flex flex-col gap-8">
+              <AssetList
+                assets={assets}
+                onEdit={handleEditAsset}
+                onDelete={handleDeleteAsset}
+                showBalances={showBalances}
+              />
+              <AddAssetForm
+                onAdd={handleAddAsset}
+                editingAsset={editingAsset}
+                onUpdate={handleAddAsset}
+                onCancelEdit={() => setEditingAsset(null)}
+              />
+            </div>
+          )
         )}
 
         {/* ================= VIEW: LEDGER HISTORY ================= */}
         {activeTab === 'history' && (
           <div className="flex flex-col gap-6">
-            {/* Header & Filter Bar */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900">
-                  Transaction Records
-                </h1>
-                <p className="text-xs text-zinc-500 mt-0.5">Historical ledger logs and archives.</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-zinc-200 p-4 rounded-xl shadow-xs">
+              <div className="flex items-center gap-2">
+                <History className="w-4 h-4 text-zinc-700" />
+                <h2 className="text-sm font-bold text-zinc-900">Ledger History</h2>
               </div>
 
-              {/* Filter Controls */}
-              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
-                <div className="flex p-0.5 rounded-lg bg-zinc-100 border border-zinc-200">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex bg-zinc-100 p-0.5 rounded-lg border border-zinc-200 text-xs">
                   {(['all', 'expense', 'income'] as const).map((type) => (
                     <button
                       key={type}
+                      type="button"
                       onClick={() => setHistoryType(type)}
-                      className={`px-3 py-1 rounded-md text-xs uppercase tracking-wider font-semibold transition-all ${
+                      className={`px-3 py-1 rounded-md capitalize font-medium transition-colors ${
                         historyType === type
-                          ? 'bg-white text-zinc-900 shadow-xs'
+                          ? 'bg-white text-zinc-950 shadow-xs'
                           : 'text-zinc-500 hover:text-zinc-900'
                       }`}
                     >
@@ -560,7 +644,7 @@ export default function Home() {
                   <select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="bg-white border border-zinc-200 text-xs font-mono px-3 py-1.5 rounded-lg text-zinc-700 focus:outline-none focus:border-zinc-400"
+                    className="bg-white border border-zinc-200 text-xs font-mono rounded-lg px-2.5 py-1.5 text-zinc-800 focus:outline-none focus:border-zinc-400"
                   >
                     <option value="">All Months</option>
                     {availableMonths.map((m) => (
@@ -573,46 +657,54 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Filtered Lists */}
-            {(historyType === 'all' || historyType === 'expense') && (
-              <div className="flex flex-col gap-2.5">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Expenses ({expenses.length})
-                </h3>
-                <ExpenseList
-                  expenses={expenses}
-                  categories={categories}
-                  onDelete={handleDeleteExpense}
-                />
-              </div>
-            )}
+            {loading ? (
+              <LedgerSkeleton />
+            ) : (
+              <>
+                {(historyType === 'all' || historyType === 'expense') && (
+                  <div className="flex flex-col gap-2.5">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Expenses ({filteredExpenses.length})
+                    </h3>
+                    <ExpenseList
+                      expenses={filteredExpenses}
+                      categories={categories}
+                      onDelete={handleDeleteExpense}
+                    />
+                  </div>
+                )}
 
-            {(historyType === 'all' || historyType === 'income') && (
-              <div className="flex flex-col gap-2.5 pt-4">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Incomes ({incomes.length})
-                </h3>
-                <IncomeList
-                  incomes={incomes}
-                  categories={incomeCategories}
-                  onDelete={handleDeleteIncome}
-                />
-              </div>
+                {(historyType === 'all' || historyType === 'income') && (
+                  <div className="flex flex-col gap-2.5 pt-4">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Incomes ({filteredIncomes.length})
+                    </h3>
+                    <IncomeList
+                      incomes={filteredIncomes}
+                      categories={incomeCategories}
+                      onDelete={handleDeleteIncome}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
 
         {/* ================= VIEW: FINANCIAL ANALYTICS ================= */}
         {activeTab === 'summary' && (
-          <SummaryDashboard
-            expenses={expenses}
-            incomes={incomes}
-            categories={categories}
-            incomeCategories={incomeCategories}
-            filterMonth={selectedMonth}
-            view="combined"
-            showBalances={showBalances}
-          />
+          loading ? (
+            <SummarySkeleton />
+          ) : (
+            <SummaryDashboard
+              expenses={filteredExpenses}
+              incomes={filteredIncomes}
+              categories={categories}
+              incomeCategories={incomeCategories}
+              filterMonth={selectedMonth}
+              showBalances={showBalances}
+            />
+          )
         )}
       </main>
 

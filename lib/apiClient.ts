@@ -30,16 +30,19 @@ function getAppsScriptBaseUrl(deploymentId?: string): string | null {
 }
 
 function normalizeDateString(val: unknown): string {
-  if (!val) return new Date().toISOString().substring(0, 10);
+  if (!val) return '';
   const str = String(val).trim();
   if (str.length >= 10 && str[4] === '-' && str[7] === '-') {
     return str.substring(0, 10);
   }
   const parsed = new Date(str);
   if (!isNaN(parsed.getTime())) {
-    return parsed.toISOString().substring(0, 10);
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, '0');
+    const d = String(parsed.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
-  return str.substring(0, 10) || new Date().toISOString().substring(0, 10);
+  return str.substring(0, 10);
 }
 
 async function appsScriptGet<T>(params: Record<string, string | undefined>): Promise<T> {
@@ -169,7 +172,7 @@ export async function getExpenses(month?: string, category?: string): Promise<Ex
     });
     return (data.expenses || []).map((e) => ({
       ...e,
-      date: normalizeDateString(e.date),
+      date: normalizeDateString(e.date || (e as unknown as { createdAt?: string }).createdAt),
       amount: Number(e.amount) || 0,
     }));
   } catch (err) {
@@ -336,7 +339,7 @@ export async function getIncomes(month?: string, category?: string): Promise<Inc
     });
     return (data.incomes || []).map((i) => ({
       ...i,
-      date: normalizeDateString(i.date),
+      date: normalizeDateString(i.date || (i as unknown as { createdAt?: string }).createdAt),
       amount: Number(i.amount) || 0,
     }));
   } catch (err) {
