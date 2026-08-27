@@ -2,6 +2,7 @@
 
 import { ArrowDownLeft, ArrowUpRight, PieChart, TrendingUp } from 'lucide-react';
 import { Expense, Income, CategoryData } from '@/lib/types';
+import { DonutChart, getPaletteColor, DonutSegment } from './DonutChart';
 
 interface SummaryDashboardProps {
   expenses: Expense[];
@@ -29,8 +30,8 @@ export function SummaryDashboard({
   filterMonth,
   showBalances = true,
 }: SummaryDashboardProps) {
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const totalIncome = incomes.reduce((s, i) => s + i.amount, 0);
+  const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+  const totalIncome = incomes.reduce((s, i) => s + (Number(i.amount) || 0), 0);
   const netBalance = totalIncome - totalExpenses;
   const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
@@ -39,19 +40,16 @@ export function SummaryDashboard({
   const expenseByCategory = categories.reduce<Record<string, number>>((acc, cat) => {
     acc[cat.name] = expenses
       .filter((e) => e.category === cat.name)
-      .reduce((s, e) => s + e.amount, 0);
+      .reduce((s, e) => s + (Number(e.amount) || 0), 0);
     return acc;
   }, {});
 
   const incomeByCategory = incomeCategories.reduce<Record<string, number>>((acc, cat) => {
     acc[cat.name] = incomes
       .filter((i) => i.category === cat.name)
-      .reduce((s, i) => s + i.amount, 0);
+      .reduce((s, i) => s + (Number(i.amount) || 0), 0);
     return acc;
   }, {});
-
-  const maxExpense = Math.max(...Object.values(expenseByCategory), 1);
-  const maxIncome = Math.max(...Object.values(incomeByCategory), 1);
 
   const sortedExpenseCategories = [...categories]
     .filter((c) => (expenseByCategory[c.name] ?? 0) > 0)
@@ -60,6 +58,19 @@ export function SummaryDashboard({
   const sortedIncomeCategories = [...incomeCategories]
     .filter((c) => (incomeByCategory[c.name] ?? 0) > 0)
     .sort((a, b) => (incomeByCategory[b.name] ?? 0) - (incomeByCategory[a.name] ?? 0));
+
+  // Prepare donut segments
+  const expenseSegments: DonutSegment[] = sortedExpenseCategories.map((cat, idx) => ({
+    name: cat.name,
+    value: expenseByCategory[cat.name] ?? 0,
+    color: getPaletteColor(idx, 'expense'),
+  }));
+
+  const incomeSegments: DonutSegment[] = sortedIncomeCategories.map((cat, idx) => ({
+    name: cat.name,
+    value: incomeByCategory[cat.name] ?? 0,
+    color: getPaletteColor(idx, 'income'),
+  }));
 
   return (
     <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-6">
@@ -138,104 +149,50 @@ export function SummaryDashboard({
         </div>
       </div>
 
-      {/* Breakdown Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Expense Category Breakdown */}
+      {/* 2-Column Donut Charts Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Expense Donut Chart Card */}
         <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-xs flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-900 flex items-center gap-2">
               <PieChart className="w-4 h-4 text-rose-600" />
               <span>Expense Categories</span>
             </h3>
-            <span className="font-mono text-xs font-bold text-rose-600">
+            <span className="font-mono text-xs font-bold text-rose-600 tabular-nums">
               {showBalances ? formatAmount(totalExpenses) : '••••••'}
             </span>
           </div>
 
-          {sortedExpenseCategories.length === 0 ? (
-            <p className="text-center text-xs text-zinc-400 py-8">
-              No expense records for this period.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-3 pt-1">
-              {sortedExpenseCategories.map((cat) => {
-                const val = expenseByCategory[cat.name] ?? 0;
-                const pct = totalExpenses > 0 ? (val / totalExpenses) * 100 : 0;
-                const barPct = maxExpense > 0 ? (val / maxExpense) * 100 : 0;
-
-                return (
-                  <div key={cat.name} className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-zinc-800 font-sans">{cat.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-zinc-400 font-mono">
-                          {pct.toFixed(1)}%
-                        </span>
-                        <span className="font-mono font-semibold text-zinc-900 tabular-nums">
-                          {showBalances ? formatAmount(val) : '••••••'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-rose-500 rounded-full transition-all duration-500"
-                        style={{ width: `${barPct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <DonutChart
+            data={expenseSegments}
+            total={totalExpenses}
+            formatValue={formatAmount}
+            showBalances={showBalances}
+            emptyLabel="No expense records for this period."
+            accentType="expense"
+          />
         </div>
 
-        {/* Income Category Breakdown */}
+        {/* Income Donut Chart Card */}
         <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-xs flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-900 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-emerald-600" />
               <span>Income Sources</span>
             </h3>
-            <span className="font-mono text-xs font-bold text-emerald-600">
+            <span className="font-mono text-xs font-bold text-emerald-600 tabular-nums">
               {showBalances ? formatAmount(totalIncome) : '••••••'}
             </span>
           </div>
 
-          {sortedIncomeCategories.length === 0 ? (
-            <p className="text-center text-xs text-zinc-400 py-8">
-              No income records for this period.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-3 pt-1">
-              {sortedIncomeCategories.map((cat) => {
-                const val = incomeByCategory[cat.name] ?? 0;
-                const pct = totalIncome > 0 ? (val / totalIncome) * 100 : 0;
-                const barPct = maxIncome > 0 ? (val / maxIncome) * 100 : 0;
-
-                return (
-                  <div key={cat.name} className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-zinc-800 font-sans">{cat.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-zinc-400 font-mono">
-                          {pct.toFixed(1)}%
-                        </span>
-                        <span className="font-mono font-semibold text-emerald-600 tabular-nums">
-                          {showBalances ? formatAmount(val) : '••••••'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-600 rounded-full transition-all duration-500"
-                        style={{ width: `${barPct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <DonutChart
+            data={incomeSegments}
+            total={totalIncome}
+            formatValue={formatAmount}
+            showBalances={showBalances}
+            emptyLabel="No income records for this period."
+            accentType="income"
+          />
         </div>
       </div>
     </div>
