@@ -52,6 +52,8 @@ jobs:
 
       - name: Build Next.js Static Export
         run: npm run build
+        env:
+          IS_TAURI: 'true'
 
       - name: Initialize Tauri Android
         run: npx tauri android init
