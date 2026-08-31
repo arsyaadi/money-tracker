@@ -39,6 +39,7 @@ import { IncomeList } from '@/components/IncomeList';
 import { SummaryDashboard } from '@/components/SummaryDashboard';
 import { SettingsModal } from '@/components/SettingsModal';
 import { PinModal } from '@/components/PinModal';
+import { SplashScreen } from '@/components/SplashScreen';
 import {
   DashboardSkeleton,
   AssetListSkeleton,
@@ -171,14 +172,12 @@ export default function Home() {
   const handleAddExpense = (expense: Expense) => {
     startTransition(() => {
       setExpenses((prev) => [expense, ...prev]);
-      setActiveTab('dashboard');
     });
   };
 
   const handleAddIncome = (income: Income) => {
     startTransition(() => {
       setIncomes((prev) => [income, ...prev]);
-      setActiveTab('dashboard');
     });
   };
 
@@ -754,6 +753,9 @@ export default function Home() {
         onClose={() => setIsPinModalOpen(false)}
         onSuccess={handlePinSuccess}
       />
+
+      {/* Cold-Start Mobile Splash Screen */}
+      <SplashScreen isLoading={loading} />
     </div>
   );
 }
