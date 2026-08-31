@@ -5,6 +5,7 @@ import { Eye, EyeOff, Lock, Edit2, Trash2, Wallet } from 'lucide-react';
 import { Asset } from '@/lib/types';
 import { deleteAsset } from '@/lib/apiClient';
 import { ConfirmDialog } from './ConfirmDialog';
+import { LoadingOverlay } from './LoadingOverlay';
 
 interface AssetListProps {
   assets: Asset[];
@@ -58,6 +59,9 @@ export function AssetList({
 
   return (
     <div className="w-full max-w-[1200px] mx-auto flex flex-col gap-6">
+      {/* Fullscreen Loading Overlay for Deletions */}
+      {deletingId && <LoadingOverlay message="REMOVING ASSET..." />}
+
       {/* Delete Confirmation Modal */}
       <ConfirmDialog
         isOpen={!!assetToDelete}

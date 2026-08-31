@@ -6,6 +6,7 @@ import { Income, CategoryData } from '@/lib/types';
 import { deleteIncome } from '@/lib/apiClient';
 import { CategoryBadge } from './CategoryBadge';
 import { ConfirmDialog } from './ConfirmDialog';
+import { LoadingOverlay } from './LoadingOverlay';
 
 interface IncomeListProps {
   incomes: Income[];
@@ -76,6 +77,9 @@ export function IncomeList({
 
   return (
     <div className="flex flex-col gap-4 w-full">
+      {/* Fullscreen Loading Overlay for Deletions */}
+      {deletingId && <LoadingOverlay message="DELETING INCOME..." />}
+
       {/* Delete Confirmation Modal */}
       <ConfirmDialog
         isOpen={!!incomeToDelete}

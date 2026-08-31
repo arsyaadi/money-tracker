@@ -6,6 +6,7 @@ import { Expense, CategoryData } from '@/lib/types';
 import { deleteExpense } from '@/lib/apiClient';
 import { CategoryBadge } from './CategoryBadge';
 import { ConfirmDialog } from './ConfirmDialog';
+import { LoadingOverlay } from './LoadingOverlay';
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -76,6 +77,9 @@ export function ExpenseList({
 
   return (
     <div className="flex flex-col gap-4 w-full">
+      {/* Fullscreen Loading Overlay for Deletions */}
+      {deletingId && <LoadingOverlay message="DELETING EXPENSE..." />}
+
       {/* Delete Confirmation Modal */}
       <ConfirmDialog
         isOpen={!!expenseToDelete}

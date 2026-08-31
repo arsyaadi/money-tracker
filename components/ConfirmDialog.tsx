@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
-import { AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, X, Loader2 } from 'lucide-react';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -106,9 +106,10 @@ export function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`px-4 py-2 rounded-lg text-xs font-semibold btn-press transition-colors disabled:opacity-50 ${confirmBtnBg}`}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold btn-press transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5 ${confirmBtnBg}`}
           >
-            {isLoading ? 'Processing...' : confirmLabel}
+            {isLoading && <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />}
+            <span>{isLoading ? 'Processing...' : confirmLabel}</span>
           </button>
         </div>
       </div>

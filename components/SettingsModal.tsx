@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sliders, X, RefreshCw, Cloud, Bell, Lock, Key, ShieldCheck, Trash2, Plus } from 'lucide-react';
+import { Sliders, X, RefreshCw, Cloud, Bell, Lock, Key, ShieldCheck, Trash2, Plus, Loader2 } from 'lucide-react';
 import { NotificationSettings } from '@/lib/types';
 import {
   getSettings,
@@ -344,9 +344,14 @@ export function SettingsModal({
                 <button
                   type="button"
                   onClick={handleSendTest}
-                  className="w-full py-2 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-medium flex items-center justify-center gap-1.5 btn-press transition-colors"
+                  disabled={testStatus === 'Sending test notification...'}
+                  className="w-full py-2 px-3 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-medium flex items-center justify-center gap-1.5 btn-press transition-colors disabled:opacity-50"
                 >
-                  <Bell className="w-3.5 h-3.5" />
+                  {testStatus === 'Sending test notification...' ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Bell className="w-3.5 h-3.5" />
+                  )}
                   <span>Send Test Notification</span>
                 </button>
                 {testStatus && (
