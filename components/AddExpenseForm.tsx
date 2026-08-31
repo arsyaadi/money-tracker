@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, CheckCircle2, AlertCircle, X, Tag } from 'lucide-react';
+import { Plus, CheckCircle2, AlertCircle, X, Tag, Loader2 } from 'lucide-react';
 import { Expense, CategoryData } from '@/lib/types';
 import { addExpense, addCategory, deleteCategory } from '@/lib/apiClient';
+import { LoadingOverlay } from './LoadingOverlay';
 
 function getLocalToday() {
   const now = new Date();
@@ -40,9 +41,16 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
   const [deletingCatId, setDeletingCatId] = useState<string | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; name: string } | null>(null);
 
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '');
+    const formatted = digits ? new Intl.NumberFormat('id-ID').format(Number(digits)) : '';
+    setForm((prev) => ({ ...prev, amount: formatted }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.amount || Number(form.amount) <= 0) {
+    const rawAmount = Number(form.amount.replace(/\D/g, ''));
+    if (!rawAmount || rawAmount <= 0) {
       setError('Please enter a valid expense amount');
       return;
     }
@@ -53,7 +61,7 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
     try {
       const created = await addExpense({
         ...form,
-        amount: Number(form.amount),
+        amount: rawAmount,
       });
 
       onAdd(created);
@@ -133,6 +141,19 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
         </p>
       </header>
 
+      {/* Fullscreen Loading Overlay for Async Actions */}
+      {(loading || addingCatLoading || !!deletingCatId) && (
+        <LoadingOverlay
+          message={
+            loading
+              ? 'RECORDING EXPENSE...'
+              : addingCatLoading
+              ? 'SAVING CATEGORY...'
+              : 'DELETING CATEGORY...'
+          }
+        />
+      )}
+
       {/* Delete Confirmation Modal */}
       {categoryToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
@@ -192,11 +213,11 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
               </span>
               <input
                 id="amount"
-                type="number"
+                type="text"
                 inputMode="numeric"
                 placeholder="0"
                 value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                onChange={handleAmountChange}
                 className="w-full pl-12 pr-4 py-3 rounded-lg border border-zinc-200 bg-white text-zinc-900 placeholder-zinc-400 font-mono text-xl font-bold focus:outline-none focus:border-zinc-500 transition-colors"
                 required
               />
@@ -264,9 +285,10 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
                   type="button"
                   onClick={handleAddCategory}
                   disabled={addingCatLoading || !newCatName.trim()}
-                  className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition-colors disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  {addingCatLoading ? '...' : 'Add'}
+                  {addingCatLoading && <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />}
+                  <span>{addingCatLoading ? 'Adding...' : 'Add'}</span>
                 </button>
               </div>
             )}
@@ -310,10 +332,11 @@ export function AddExpenseForm({ categories, onAdd, onRefreshCategories }: AddEx
           <div className="pt-3">
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold uppercase tracking-wider btn-press disabled:opacity-50 transition-colors"
+              disabled={loading || isAddingCategory}
+              className="w-full py-3 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold uppercase tracking-wider btn-press disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
             >
-              {loading ? 'Saving...' : 'Record Expense'}
+              {loading && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+              <span>{loading ? 'Recording Expense...' : 'Record Expense'}</span>
             </button>
           </div>
         </form>

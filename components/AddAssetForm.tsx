@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Asset } from '@/lib/types';
 import { addAsset, updateAsset } from '@/lib/apiClient';
+import { LoadingOverlay } from './LoadingOverlay';
 
 interface AddAssetFormProps {
   onAdd: (asset: Asset) => void;
@@ -27,9 +28,11 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
 
   useEffect(() => {
     if (editingAsset) {
+      const raw = String(editingAsset.amount).replace(/\D/g, '');
+      const formatted = raw ? new Intl.NumberFormat('id-ID').format(Number(raw)) : '';
       setForm({
         name: editingAsset.name,
-        amount: String(editingAsset.amount),
+        amount: formatted,
         icon: editingAsset.icon || 'wallet',
       });
     } else {
@@ -41,13 +44,20 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
     }
   }, [editingAsset]);
 
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '');
+    const formatted = digits ? new Intl.NumberFormat('id-ID').format(Number(digits)) : '';
+    setForm((prev) => ({ ...prev, amount: formatted }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
       setError('Please enter asset holding name');
       return;
     }
-    if (!form.amount || Number(form.amount) < 0) {
+    const rawAmount = Number(form.amount.replace(/\D/g, ''));
+    if (isNaN(rawAmount) || rawAmount < 0) {
       setError('Please enter a valid amount');
       return;
     }
@@ -61,14 +71,14 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
         const updated = await updateAsset({
           id: editingAsset.id,
           name: form.name.trim(),
-          amount: Number(form.amount),
+          amount: rawAmount,
           icon: form.icon,
         });
         onUpdate?.(updated);
       } else {
         const created = await addAsset({
           name: form.name.trim(),
-          amount: Number(form.amount),
+          amount: rawAmount,
           icon: form.icon,
         });
         onAdd(created);
@@ -90,6 +100,11 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
 
   return (
     <div className="w-full max-w-[620px] mx-auto flex flex-col gap-6">
+      {/* Fullscreen Loading Overlay for Actions */}
+      {loading && (
+        <LoadingOverlay message={isEditing ? 'UPDATING ASSET...' : 'ADDING ASSET...'} />
+      )}
+
       {/* Main Card */}
       <div className="bg-white border border-zinc-200 rounded-xl p-6 sm:p-8 shadow-xs flex flex-col gap-5">
         <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
@@ -147,11 +162,11 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
               </span>
               <input
                 id="asset-amount"
-                type="number"
+                type="text"
                 inputMode="numeric"
                 placeholder="0"
                 value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                onChange={handleAmountChange}
                 className="w-full pl-12 pr-4 py-2.5 rounded-lg border border-zinc-200 bg-white text-zinc-900 font-mono text-base font-bold focus:outline-none focus:border-zinc-500"
                 required
               />
@@ -162,9 +177,10 @@ export function AddAssetForm({ onAdd, editingAsset, onUpdate, onCancelEdit }: Ad
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold uppercase tracking-wider btn-press disabled:opacity-50 transition-colors"
+              className="w-full py-2.5 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold uppercase tracking-wider btn-press disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
             >
-              {loading ? 'Saving...' : isEditing ? 'Update Holding' : 'Add Holding'}
+              {loading && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+              <span>{loading ? (isEditing ? 'Updating Holding...' : 'Saving Holding...') : isEditing ? 'Update Holding' : 'Add Holding'}</span>
             </button>
           </div>
         </form>
